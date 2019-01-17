@@ -24,6 +24,7 @@
         android:textColor="#515151"
         android:layout_marginLeft="@dimen/dp_5"
         android:gravity="center"
+
         />
     <TextView
         android:layout_below="@+id/view_main"
