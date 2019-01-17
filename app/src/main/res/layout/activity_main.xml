@@ -1,18 +1,294 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#e9e9e9"
+    android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+   <ScrollView
+       android:layout_width="match_parent"
+       android:layout_height="match_parent">
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          android:orientation="vertical">
 
-</android.support.constraint.ConstraintLayout>
+   <RelativeLayout
+       android:layout_width="match_parent"
+       android:layout_height="@dimen/dp_jy_44"
+       android:background="@color/white">
+      <ImageView
+          android:id="@+id/img_exit"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:src="@mipmap/ic_exit"
+          android:layout_centerVertical="true"
+          android:layout_marginLeft="@dimen/dp_jy_12"/>
+
+      <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="设备控制"
+          android:textColor="#333333"
+          android:layout_centerInParent="true"
+          android:textSize="@dimen/sp_22"/>
+      <ImageView
+          android:id="@+id/img_add"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:src="@mipmap/ic_add"
+          android:layout_centerVertical="true"
+          android:layout_alignParentRight="true"
+          android:layout_marginRight="@dimen/dp_jy_12"/>
+
+
+   </RelativeLayout>
+   
+   
+   <LinearLayout
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content"
+       android:orientation="vertical"
+       android:background="@drawable/bg_fill5_wite"
+       android:layout_marginTop="@dimen/dp_jy_15"
+       android:layout_marginLeft="@dimen/dp_jy_15"
+       android:layout_marginRight="@dimen/dp_jy_15"
+       >
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="horizontal"
+          android:layout_marginTop="@dimen/dp_jy_20">
+         <TextView
+             android:id="@+id/tv1"
+             android:layout_width="@dimen/dp_jy_95"
+             android:layout_height="@dimen/dp_jy_34"
+             android:layout_weight="1"
+             android:background="@drawable/bg_fill5_gray"
+             android:text="定时控制"
+             android:gravity="center"
+             android:textColor="@color/white"
+             android:textSize="@dimen/sp_17"
+             android:layout_marginLeft="@dimen/dp_jy_15"
+             android:layout_marginRight="@dimen/dp_jy_15"
+             />
+         <TextView
+             android:id="@+id/tv2"
+             android:layout_width="@dimen/dp_jy_95"
+             android:layout_height="@dimen/dp_jy_34"
+             android:layout_weight="1"
+             android:background="@drawable/bg_fill5_gray"
+             android:text="联动控制"
+             android:gravity="center"
+             android:textColor="@color/white"
+             android:textSize="@dimen/sp_17"
+             />
+         <TextView
+             android:id="@+id/tv3"
+             android:layout_width="@dimen/dp_jy_95"
+             android:layout_height="@dimen/dp_jy_34"
+             android:layout_weight="1"
+             android:background="@drawable/bg_fill5_gray"
+             android:text="开关量测试"
+             android:gravity="center"
+             android:textColor="@color/white"
+             android:textSize="@dimen/sp_17"
+             android:layout_marginLeft="@dimen/dp_jy_15"
+             android:layout_marginRight="@dimen/dp_jy_15"
+             />
+      </LinearLayout>
+
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="horizontal"
+          android:layout_marginTop="@dimen/dp_jy_20">
+         <TextView
+             android:id="@+id/tv4"
+             android:layout_width="@dimen/dp_jy_95"
+             android:layout_height="@dimen/dp_jy_34"
+             android:layout_weight="1"
+             android:background="@drawable/bg_fill5_gray"
+             android:text="报警设置"
+             android:gravity="center"
+             android:textColor="@color/white"
+             android:textSize="@dimen/sp_17"
+             android:layout_marginLeft="@dimen/dp_jy_15"
+             android:layout_marginRight="@dimen/dp_jy_15"
+             />
+         <TextView
+             android:id="@+id/tv5"
+             android:layout_width="@dimen/dp_jy_95"
+             android:layout_height="@dimen/dp_jy_34"
+             android:layout_weight="1"
+             android:background="@drawable/bg_fill5_gray"
+             android:text="地图定位"
+             android:gravity="center"
+             android:textColor="@color/white"
+             android:textSize="@dimen/sp_17"
+             />
+         <TextView
+             android:id="@+id/tv6"
+             android:layout_width="@dimen/dp_jy_95"
+             android:layout_height="@dimen/dp_jy_34"
+             android:layout_weight="1"
+             android:background="@drawable/bg_fill5_gray"
+             android:text="掉电记忆"
+             android:gravity="center"
+             android:textColor="@color/white"
+             android:textSize="@dimen/sp_17"
+             android:layout_marginLeft="@dimen/dp_jy_15"
+             android:layout_marginRight="@dimen/dp_jy_15"
+             />
+      </LinearLayout>
+      <LinearLayout
+          android:id="@+id/ll_switch1"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:background="@mipmap/bg_main_close2"
+          android:layout_gravity="center_horizontal"
+          android:layout_marginTop="@dimen/dp_jy_20"
+          android:gravity="center_horizontal">
+         <TextView
+             android:id="@+id/tv_switch1"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:textColor="@color/main_gray"
+             android:layout_marginTop="@dimen/dp_jy_78"
+             android:text="配电系统"
+             android:textSize="@dimen/sp_20"/>
+      </LinearLayout>
+
+      <RelativeLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content">
+         <ImageView
+             android:id="@+id/img_refresh1"
+             android:layout_width="@dimen/dp_jy_39"
+             android:layout_height="@dimen/dp_jy_39"
+             android:layout_alignParentRight="true"
+             android:layout_marginRight="@dimen/dp_jy_20"
+             android:layout_marginBottom="@dimen/dp_jy_20"
+             android:scaleType="center"
+             android:src="@mipmap/ic_refresh2"
+             android:background="@drawable/bg_main_refresh"/>
+      </RelativeLayout>
+
+   </LinearLayout>
+
+
+   <LinearLayout
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content"
+       android:layout_marginTop="@dimen/dp_jy_15"
+       android:layout_marginLeft="@dimen/dp_jy_15"
+       android:layout_marginRight="@dimen/dp_jy_15"
+       android:background="@drawable/bg_fill5_wite"
+       android:orientation="vertical">
+      <RelativeLayout
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/dp_jy_15">
+         <ImageView
+             android:id="@+id/img_tem"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_marginLeft="@dimen/dp_jy_25"
+             android:src="@mipmap/ic_tem2"/>
+         <TextView
+             android:id="@+id/tv_tem"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:textSize="@dimen/sp_16"
+               android:layout_toRightOf="@id/img_tem"
+             android:textColor="@color/main_gray"
+             android:layout_marginLeft="@dimen/dp_jy_5"
+             android:text="32" />
+         <TextView
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_alignBottom="@id/tv_tem"
+             android:layout_toRightOf="@id/tv_tem"
+             android:textSize="@dimen/sp_13"
+             android:text="℃"
+             android:textColor="@color/main_gray"/>
+         <TextView
+             android:id="@+id/tv_hum"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_alignTop="@id/tv_tem"
+             android:layout_alignParentRight="true"
+             android:text="80%"
+             android:layout_marginRight="@dimen/dp_jy_25"
+             android:textColor="@color/main_gray"
+             android:textSize="@dimen/sp_16"/>
+         <ImageView
+             android:id="@+id/img_hum"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_toLeftOf="@id/tv_hum"
+             android:src="@mipmap/ic_hum2"
+             android:layout_marginRight="@dimen/dp_jy_5"/>
+      </RelativeLayout>
+
+      <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content" />
+
+
+      <LinearLayout
+          android:id="@+id/ll_switch2"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:background="@mipmap/bg_main_close2"
+          android:layout_gravity="center_horizontal"
+          android:layout_marginTop="@dimen/dp_jy_20"
+          android:gravity="center_horizontal">
+         <TextView
+             android:id="@+id/tv_switch2"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:textColor="@color/main_gray"
+             android:layout_marginTop="@dimen/dp_jy_78"
+             android:text="控制系统"
+             android:textSize="@dimen/sp_20"/>
+      </LinearLayout>
+
+      <RelativeLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="@dimen/dp_jy_20">
+
+         <TextView
+             android:id="@+id/tv7"
+             android:layout_width="@dimen/dp_jy_95"
+             android:layout_height="@dimen/dp_jy_34"
+             android:layout_weight="1"
+             android:background="@drawable/bg_fill5_gray"
+             android:text="掉电记忆"
+             android:gravity="center"
+             android:textColor="@color/white"
+             android:textSize="@dimen/sp_17"
+             android:layout_marginLeft="@dimen/dp_jy_15"
+             android:layout_marginRight="@dimen/dp_jy_15"
+             />
+         <ImageView
+             android:id="@+id/img_refresh2"
+             android:layout_width="@dimen/dp_jy_39"
+             android:layout_height="@dimen/dp_jy_39"
+             android:layout_alignParentRight="true"
+             android:layout_marginRight="@dimen/dp_jy_20"
+             android:layout_marginBottom="@dimen/dp_jy_20"
+             android:scaleType="center"
+             android:src="@mipmap/ic_refresh2"
+             android:background="@drawable/bg_main_refresh"/>
+      </RelativeLayout>
+   </LinearLayout>
+
+      </LinearLayout>
+   </ScrollView>
+</LinearLayout>
