@@ -27,7 +27,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 
 
-    implementation 'com.jakewharton:butterknife:8.6.0'
-    annotationProcessor "com.jakewharton:butterknife-compiler:8.6.0"
+    implementation 'com.jakewharton:butterknife:8.8.1'
+    annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1'
     implementation 'com.mcxiaoke.volley:library:1.0.19'
 }
