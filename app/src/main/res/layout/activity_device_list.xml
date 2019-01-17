@@ -74,7 +74,7 @@
         </RelativeLayout>
         <RelativeLayout
             android:layout_below="@+id/rl_ps"
-            android:layout_marginTop="@dimen/dp_20"
+            android:layout_marginTop="@dimen/dp_25"
             android:id="@+id/rl_ks"
             android:layout_width="match_parent"
             android:layout_height="@dimen/dp_55"
