@@ -8,6 +8,6 @@
 
     <!-- 圆角的幅度 -->
     <corners
-        android:radius="@dimen/dp_jy_25" />
+        android:radius="@dimen/dp_25" />
 
 </shape>
