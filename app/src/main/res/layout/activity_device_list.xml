@@ -5,12 +5,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".devicelist.DeviceListActivity">
-    <View
-        android:id="@+id/view_main"
-        android:layout_width="match_parent"
-        android:background="#ffffff"
-        android:layout_height="@dimen/dp_25"
-        />
+    <!--<View-->
+        <!--android:id="@+id/view_main"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:background="#ffffff"-->
+        <!--android:layout_height="@dimen/dp_25"-->
+        <!--/>-->
     <RelativeLayout
         android:id="@+id/rl_head"
         android:layout_below="@+id/view_main"

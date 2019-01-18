@@ -23,7 +23,7 @@ import butterknife.ButterKnife;
 
 public abstract class BaseActivity extends FragmentActivity {
     /** 是否沉浸状态栏 **/
-    private boolean isSetStatusBar = true;
+    private boolean isSetStatusBar = false;
     /** 是否允许全屏 **/
     private boolean mAllowFullScreen = false;
     /** 是否禁止旋转屏幕 **/
@@ -68,10 +68,11 @@ public abstract class BaseActivity extends FragmentActivity {
             initView(mContextView);
             doBusiness(this);
 
-            StatusBarUtil.transparencyBar(this); //设置状态栏全透明
-            if (isSetStatusBar) {
-                steepStatusBar();
-            }
+            StatusBarUtil.StatusBarLightMode(this);
+//            StatusBarUtil.transparencyBar(this); //设置状态栏全透明
+//            if (isSetStatusBar) {
+//                steepStatusBar();
+//            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -89,7 +90,7 @@ public abstract class BaseActivity extends FragmentActivity {
 //            getWindow().addFlags(
 //                    WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
 //        }
-        StatusBarUtil.StatusBarLightMode(this); //设置白底黑字
+//        StatusBarUtil.StatusBarLightMode(this); //设置白底黑字
     }
 
     /**
@@ -184,7 +185,7 @@ public abstract class BaseActivity extends FragmentActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        MyApplication.getQueue().cancelAll(this);
+//        MyApplication.getQueue().cancelAll(this);
     }
 
     @Override
@@ -251,6 +252,12 @@ public abstract class BaseActivity extends FragmentActivity {
         lastClick = System.currentTimeMillis();
         return true;
     }
+
+    public int getType() {
+        int userId= (int) sharedPreferencesHelper.getSharedPreference("type",0);
+        return userId ;
+    }
+
 
     public int getUid() {
         int userId= (int) sharedPreferencesHelper.getSharedPreference("id",0);

@@ -17,6 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.peihou.willgood.R;
+import com.peihou.willgood.activity.MainActivity;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.util.DisplayUtil;
 import com.peihou.willgood.util.Mobile;
@@ -100,6 +101,7 @@ public class LoginActivity extends BaseActivity {
                         ToastUtil.showShort(this,"不合法的手机号码");
                         break;
                     }
+                    startActivity(MainActivity.class);
                 }
                 break;
         }
