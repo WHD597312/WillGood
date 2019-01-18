@@ -89,9 +89,12 @@ public class DeviceListActivity extends BaseActivity {
         }
     }
 
-    @OnClick({R.id.rl_ps, R.id.rl_ks})
+    @OnClick({R.id.img_back,R.id.rl_ps, R.id.rl_ks})
     public void onViewClicked(View view) {
         switch (view.getId()) {
+            case R.id.img_back:
+                finish();
+                break;
             case R.id.rl_ps:
                 editor.putInt("type",1);
                 editor.commit();
