@@ -92,17 +92,18 @@ public class LoginActivity extends BaseActivity {
                 }
                 break;
             case R.id.btn_login:
-                String phone=et_phone.getText().toString();
-                if (TextUtils.isEmpty(phone)){
-                    ToastUtil.showShort(this,"请输入手机号码");
-                    break;
-                }else {
-                    if (!Mobile.isMobile(phone)){
-                        ToastUtil.showShort(this,"不合法的手机号码");
-                        break;
-                    }
-                    startActivity(MainActivity.class);
-                }
+//                String phone=et_phone.getText().toString();
+//                if (TextUtils.isEmpty(phone)){
+//                    ToastUtil.showShort(this,"请输入手机号码");
+//                    break;
+//                }else {
+//                    if (!Mobile.isMobile(phone)){
+//                        ToastUtil.showShort(this,"不合法的手机号码");
+//                        break;
+//                    }
+//                    startActivity(MainActivity.class);
+//                }
+                startActivity(MainActivity.class);
                 break;
         }
     }

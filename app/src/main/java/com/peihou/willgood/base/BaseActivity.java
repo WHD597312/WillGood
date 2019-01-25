@@ -20,6 +20,7 @@ import com.peihou.willgood.util.StatusBarUtil;
 import com.peihou.willgood.util.ToastUtil;
 
 import butterknife.ButterKnife;
+import butterknife.Unbinder;
 
 public abstract class BaseActivity extends FragmentActivity {
     /** 是否沉浸状态栏 **/
@@ -35,6 +36,7 @@ public abstract class BaseActivity extends FragmentActivity {
     private String APP_NAME;
     protected final String TAG = this.getClass().getSimpleName();
     SharedPreferencesHelper sharedPreferencesHelper;
+    Unbinder unbinder;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,7 +61,7 @@ public abstract class BaseActivity extends FragmentActivity {
 
 
             setContentView(mContextView);
-            ButterKnife.bind(this);
+            unbinder=ButterKnife.bind(this);
             if (!isAllowScreenRoate) {
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
             } else {
@@ -198,6 +200,7 @@ public abstract class BaseActivity extends FragmentActivity {
     protected void onDestroy() {
         super.onDestroy();
         LogUtil.e(TAG + "--->onDestroy()");
+        unbinder.unbind();
     }
 
     /**
@@ -303,4 +306,5 @@ public abstract class BaseActivity extends FragmentActivity {
     public void toast(int resId) {
         ToastUtil.showShort(this,String.valueOf(resId));
     }
+
 }

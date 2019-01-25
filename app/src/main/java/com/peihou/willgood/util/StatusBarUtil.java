@@ -56,7 +56,7 @@ public class StatusBarUtil {
                 result = 2;
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 //6.0以上
-                activity.getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+                activity.getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
                 result = 3;
             } else {
                 //其他的都设置状态栏成半透明的,以下设置半透明是调用第三方的，根据个人需求更改
@@ -141,8 +141,4 @@ public class StatusBarUtil {
         }
         return result;
     }
-
-
-
-
 }

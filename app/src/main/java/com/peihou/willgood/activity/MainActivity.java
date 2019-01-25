@@ -9,7 +9,13 @@ import android.widget.TextView;
 
 import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
+import com.peihou.willgood.devicelist.AlermActivity;
 import com.peihou.willgood.devicelist.DeviceListActivity;
+import com.peihou.willgood.devicelist.LinkedControlActivity;
+import com.peihou.willgood.devicelist.LocationActivity;
+import com.peihou.willgood.devicelist.PowerLostMomoryActivity;
+import com.peihou.willgood.devicelist.SwichCheckActivity;
+import com.peihou.willgood.devicelist.TimerTaskActivity;
 import com.peihou.willgood.login.LoginActivity;
 
 import java.util.ArrayList;
@@ -172,16 +178,22 @@ public class MainActivity extends BaseActivity {
                 startActivity(DeviceListActivity.class);
                 break;
             case R.id.tv1:
+                startActivity(TimerTaskActivity.class);
                 break;
             case R.id.tv2:
+                startActivity(LinkedControlActivity.class);
                 break;
             case R.id.tv3:
+                startActivity(SwichCheckActivity.class);
                 break;
             case R.id.tv4:
+                startActivity(AlermActivity.class);
                 break;
             case R.id.tv5:
+                startActivity(LocationActivity.class);
                 break;
             case R.id.tv6:
+                startActivity(PowerLostMomoryActivity.class);
                 break;
             case R.id.ll_switch1:
                 if (getType() != 1) {
