@@ -12,6 +12,9 @@ import com.peihou.willgood.base.BaseActivity;
 import butterknife.BindView;
 import butterknife.OnClick;
 
+/**
+ * 掉电记忆
+ */
 public class PowerLostMomoryActivity extends BaseActivity {
 
     @BindView(R.id.img_open)

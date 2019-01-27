@@ -24,8 +24,10 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
+/**
+ * 添加定时任务
+ */
 public class AddTimeActivity extends BaseActivity {
-
 
     @BindView(R.id.grid_line) GridView grid_line;//线路控件
     @BindView(R.id.loop_hour) LoopView loop_hour;//小时控件

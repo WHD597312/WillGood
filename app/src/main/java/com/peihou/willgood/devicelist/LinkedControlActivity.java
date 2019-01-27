@@ -37,6 +37,9 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
+/**
+ * 联动控制
+ */
 public class LinkedControlActivity extends BaseActivity {
 
 

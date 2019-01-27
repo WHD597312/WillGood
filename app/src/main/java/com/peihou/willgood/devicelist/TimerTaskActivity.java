@@ -22,6 +22,9 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
+/**
+ * 定时任务
+ */
 public class TimerTaskActivity extends BaseActivity {
 
 

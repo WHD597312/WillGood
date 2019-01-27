@@ -21,6 +21,9 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
+/**
+ * 报警日志
+ */
 public class AlermLogActivity extends BaseActivity {
 
     @BindView(R.id.list_log) RecyclerView list_log;

@@ -1,4 +1,6 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
 
 android {
     signingConfigs {
@@ -49,5 +51,7 @@ dependencies {
     implementation 'com.weigan:loopView:0.1.2'
     implementation 'com.github.Jay-Goo:RangeSeekBar:v2.0.6'
     implementation 'pub.devrel:easypermissions:1.0.1'
+    implementation 'com.google.zxing:core:3.2.1'
 
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }

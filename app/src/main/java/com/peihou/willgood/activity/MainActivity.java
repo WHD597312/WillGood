@@ -9,6 +9,7 @@ import android.widget.TextView;
 
 import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
+import com.peihou.willgood.devicelist.AddDeviceActivity;
 import com.peihou.willgood.devicelist.AlermActivity;
 import com.peihou.willgood.devicelist.DeviceListActivity;
 import com.peihou.willgood.devicelist.LinkedControlActivity;
@@ -175,7 +176,7 @@ public class MainActivity extends BaseActivity {
                 startActivity(LoginActivity.class);
                 break;
             case R.id.img_add:
-                startActivity(DeviceListActivity.class);
+                startActivity(AddDeviceActivity.class);
                 break;
             case R.id.tv1:
                 startActivity(TimerTaskActivity.class);

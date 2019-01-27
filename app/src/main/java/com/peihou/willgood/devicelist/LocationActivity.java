@@ -3,6 +3,7 @@ package com.peihou.willgood.devicelist;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.IntentFilter;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.PersistableBundle;
@@ -31,6 +32,11 @@ import com.amap.api.location.AMapLocationQualityReport;
 import com.amap.api.maps.AMap;
 import com.amap.api.maps.AMapUtils;
 import com.amap.api.maps.model.Marker;
+import com.baidu.location.Address;
+import com.baidu.location.BDAbstractLocationListener;
+import com.baidu.location.BDLocation;
+import com.baidu.location.LocationClient;
+import com.baidu.location.LocationClientOption;
 import com.baidu.mapapi.map.ArcOptions;
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.BitmapDescriptor;
@@ -96,6 +102,7 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
         double latitude=30.179158;
         double longtitude=121.266949;
 
+        //反地理编码，获取经纬度详细地址
         BdMapUtils.reverseGeoParse(longtitude, latitude, new OnGetGeoCoderResultListener() {
             @Override
             public void onGetGeoCodeResult(GeoCodeResult geoCodeResult) {
@@ -253,9 +260,11 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     private void permissionGrantedSuccess() {
         String[] perms = {Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION};
         if (EasyPermissions.hasPermissions(this, perms)) {
-            initLocation();
-            startLocation();//开始定位
             // 已经申请过权限，做想做的事
+//// 开始定位
+            initLocation();
+            startLocation();
+
         } else {
 //             没有申请过权限，现在去申请
                 if (isNeedCheck) {
@@ -298,6 +307,175 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     }
 
 
+
+    LocationClient bLocationClient;
+
+    /**
+     * 初始化定位参数配置  setScanSpan可以设置定位的周期这里我设置的是10秒
+     */
+
+    MyLocationListener myLocationListener;
+    private void initLocationOption() {
+//定位服务的客户端。宿主程序在客户端声明此类，并调用，目前只支持在主线程中启动
+
+//声明LocationClient类实例并配置定位参数
+         bLocationClient= new LocationClient(getApplicationContext());
+        LocationClientOption locationOption = new LocationClientOption();
+        myLocationListener = new MyLocationListener();
+//注册监听函数
+        bLocationClient.registerLocationListener(myLocationListener);
+//可选，默认高精度，设置定位模式，高精度，低功耗，仅设备
+        locationOption.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);
+//可选，默认gcj02，设置返回的定位结果坐标系，如果配合百度地图使用，建议设置为bd09ll;
+        locationOption.setCoorType("gcj02");
+//可选，默认0，即仅定位一次，设置发起连续定位请求的间隔需要大于等于1000ms才是有效的
+        locationOption.setScanSpan(1000);
+//可选，设置是否需要地址信息，默认不需要
+        locationOption.setIsNeedAddress(true);
+//可选，设置是否需要地址描述
+        locationOption.setIsNeedLocationDescribe(true);
+//可选，设置是否需要设备方向结果
+        locationOption.setNeedDeviceDirect(false);
+//可选，默认false，设置是否当gps有效时按照1S1次频率输出GPS结果
+        locationOption.setLocationNotify(true);
+//可选，默认true，定位SDK内部是一个SERVICE，并放到了独立进程，设置是否在stop的时候杀死这个进程，默认不杀死
+        locationOption.setIgnoreKillProcess(true);
+//可选，默认false，设置是否需要位置语义化结果，可以在BDLocation.getLocationDescribe里得到，结果类似于“在北京天安门附近”
+        locationOption.setIsNeedLocationDescribe(true);
+//可选，默认false，设置是否需要POI结果，可以在BDLocation.getPoiList里得到
+        locationOption.setIsNeedLocationPoiList(true);
+//可选，默认false，设置是否收集CRASH信息，默认收集
+        locationOption.SetIgnoreCacheException(false);
+//可选，默认false，设置是否开启Gps定位
+        locationOption.setOpenGps(true);
+//可选，默认false，设置定位时是否需要海拔信息，默认不需要，除基础定位版本都可用
+        locationOption.setIsNeedAltitude(false);
+//设置打开自动回调位置模式，该开关打开后，期间只要定位SDK检测到位置变化就会主动回调给开发者，该模式下开发者无需再关心定位间隔是多少，定位SDK本身发现位置变化就会及时回调给开发者
+        locationOption.setOpenAutoNotifyMode();
+//设置打开自动回调位置模式，该开关打开后，期间只要定位SDK检测到位置变化就会主动回调给开发者
+        locationOption.setOpenAutoNotifyMode(3000,1, LocationClientOption.LOC_SENSITIVITY_HIGHT);
+
+        bLocationClient.setLocOption(locationOption);
+
+        startBaiduLocation();
+    }
+
+    /**
+     * 开始定位
+     */
+    private void startBaiduLocation(){
+        bLocationClient.start();
+    }
+
+    /**
+     * 结束定位
+     */
+    private void stopBaiduLocation(){
+        bLocationClient.stop();
+    }
+
+    String address;
+    double latitude;
+    //获取经度信息
+    double longitude;
+    /**
+     * 实现定位回调
+     */
+    public class MyLocationListener extends BDAbstractLocationListener {
+        @Override
+        public void onReceiveLocation(BDLocation location){
+            //此处的BDLocation为定位结果信息类，通过它的各种get方法可获取定位相关的全部结果
+            //以下只列举部分获取经纬度相关（常用）的结果信息
+            //更多结果信息获取说明，请参照类参考中BDLocation类中的说明
+
+
+            //获取定位精度，默认值为0.0f
+            float radius = location.getRadius();
+            //获取经纬度坐标类型，以LocationClientOption中设置过的坐标类型为准
+            String coorType = location.getCoorType();
+
+            //获取定位类型、定位错误返回码，具体信息可参照类参考中BDLocation类中的说明
+            int errorCode = location.getLocType();
+            Log.i("MyLocationListenerType","-->"+errorCode);
+            if (errorCode==161){
+                //获取纬度信息
+               latitude = location.getLatitude();
+                //获取经度信息
+               longitude = location.getLongitude();
+
+                BdMapUtils.reverseGeoParse(longitude, latitude, new OnGetGeoCoderResultListener() {
+                    @Override
+                    public void onGetGeoCodeResult(GeoCodeResult geoCodeResult) {
+
+                    }
+
+                    @Override
+                    public void onGetReverseGeoCodeResult(ReverseGeoCodeResult result) {
+                        if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
+                            // 没有检测到结果
+
+                        }else{////得到结果后处理方法
+                            address=result.getAddress();
+                            Log.i("addressaaaaaaaa","-->"+address);
+                            LatLng latLng=new LatLng(latitude,longitude);
+                            Position position2=new Position(position,address,latLng);
+                            positions.add(position2);
+
+
+                            Collections.sort(positions, new Comparator<Position>() {
+                                @Override
+                                public int compare(Position o1, Position o2) {
+                                    if (o1.getPosition()>o2.getPosition()){
+                                        return 1;
+                                    }else if (o1.getPosition()<o2.getPosition()){
+                                        return -1;
+                                    }
+                                    return 0;
+                                }
+                            });
+                            discance=0;
+                            for (int i = 0; i < positions.size(); i++) {
+                                Position position=positions.get(i);
+                                LatLng p1=position.getLatLng();
+                                LatLng p2=position.getLatLng();
+                                discance+=DistanceUtil.getDistance(p1, p2);
+                                posints.add(positions.get(i).getLatLng());
+                            }
+
+                            if (posints.size()>3){
+                                //设置折线的属性
+                                OverlayOptions mOverlayOptions = new PolylineOptions()
+                                        .width(10)
+                                        .color(0xAAFF0000)
+                                        .points(posints);
+                                Overlay mPolyline = mMap.addOverlay(mOverlayOptions);
+                            }
+
+
+                            MapStatusUpdate mapStatusUpdate2=MapStatusUpdateFactory.newLatLng(new LatLng(latitude,longitude));
+                            mMap.setMapStatus(mapStatusUpdate2);
+                            if (popupWindow!=null && popupWindow.isShowing()){
+                                if (!positions.isEmpty()){
+                                    Position start=positions.get(0);
+                                    Position end=positions.get(positions.size()-1);
+                                    String startAddress=start.getAddress();
+                                    String endAddress=end.getAddress();
+                                    tv_start.setText(startAddress);
+                                    tv_end.setText(endAddress);
+                                    tv_distance.setText(discance+"");
+                                    Date date=new Date();
+                                    SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm");
+                                    String timer=format.format(date);
+                                    tv_timer.setText(timer);
+                                }
+                            }
+                            position++;
+                        }
+                    }
+                });
+            }
+        }
+    }
     private AMapLocationClient locationClient = null;
     private AMapLocationClientOption locationOption = null;
     /**
@@ -421,13 +599,16 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                         posints.add(positions.get(i).getLatLng());
                     }
 
-                    //设置折线的属性
-                    OverlayOptions mOverlayOptions = new PolylineOptions()
-                            .width(10)
-                            .color(0xAAFF0000)
-                            .points(posints);
+                    if (positions.size()>2){
+                        //设置折线的属性
+                        OverlayOptions mOverlayOptions = new PolylineOptions()
+                                .width(10)
+                                .color(0xAAFF0000)
+                                .points(posints);
 
-                    Overlay mPolyline = mMap.addOverlay(mOverlayOptions);
+                        Overlay mPolyline = mMap.addOverlay(mOverlayOptions);
+                    }
+
 
                     MapStatusUpdate mapStatusUpdate2=MapStatusUpdateFactory.newLatLng(new LatLng(latitude,longtitude));
                     mMap.setMapStatus(mapStatusUpdate2);

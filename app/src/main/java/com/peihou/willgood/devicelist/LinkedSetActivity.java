@@ -22,6 +22,7 @@ import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.pojo.Line;
 import com.peihou.willgood.pojo.Link;
+import com.peihou.willgood.util.ToastUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,16 +31,24 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
+/**
+ * 联动设置
+ * type=0 为温度联动
+ * type=1 为湿度联动
+ * type=2 为开关量联动
+ * type=3 为电流联动
+ * type=4 为电压联动
+ */
 public class LinkedSetActivity extends BaseActivity {
 
 
-    @BindView(R.id.gv_line)
-    GridView gv_line;//线路网格布局
+    @BindView(R.id.gv_line) GridView gv_line;//线路网格布局
     private List<Line> lines=new ArrayList<>();//线路集合
-    @BindView(R.id.slide_bar)
-    RangeSeekBar slide_bar;
+    @BindView(R.id.slide_bar) RangeSeekBar slide_bar;
     @BindView(R.id.btn_once) TextView btn_once;//单次触发
     @BindView(R.id.btn_loop) TextView btn_loop;//循环触发
+    @BindView(R.id.btn_low) TextView btn_low;//低于按钮
+    @BindView(R.id.btn_high) TextView btn_high;//高于按钮
     LinesAdapter adapter;
     int type=0;
     @Override
@@ -60,9 +69,7 @@ public class LinkedSetActivity extends BaseActivity {
             s="温度";
         }else if (type==1){
             s="湿度";
-        } else if (type==2){
-            s="开关量";
-        }else if (type==3){
+        } else if (type==3){
             s="电流";
         }else if (type==4){
             s="电压";
@@ -93,6 +100,8 @@ public class LinkedSetActivity extends BaseActivity {
             }
         });
         slide_bar.setTypeface(Typeface.DEFAULT_BOLD);
+//        slide_bar.setValue(40);
+//        slide_bar.setLineRight(40);
         slide_bar.setIndicatorTextDecimalFormat("0");
 
 
@@ -119,11 +128,29 @@ public class LinkedSetActivity extends BaseActivity {
 
     }
 
-    @OnClick({R.id.img_back,R.id.btn_once,R.id.btn_loop})
+    @OnClick({R.id.img_back,R.id.btn_low,R.id.btn_high,R.id.btn_once,R.id.btn_loop,R.id.img_ensure})
     public void onClick(View view){
         switch (view.getId()){
             case R.id.img_back:
                 finish();
+                break;
+            case R.id.img_ensure:
+                ToastUtil.show(this,"设置成功",0);
+                finish();
+                break;
+            case R.id.btn_low:
+                if (condition==0){
+                    break;
+                }
+                condition=0;
+                setCaseLimit();
+                break;
+            case R.id.btn_high:
+                if (condition==1){
+                    break;
+                }
+                condition=1;
+                setCaseLimit();
                 break;
             case R.id.btn_once:
                 if (touch==0){
@@ -142,7 +169,6 @@ public class LinkedSetActivity extends BaseActivity {
         }
     }
 
-
     int touch=0;//为0是单次触发，1为多次触发
     private void setTouchMode(){
         if (touch==0){
@@ -157,7 +183,21 @@ public class LinkedSetActivity extends BaseActivity {
             btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
     }
-    class LinesAdapter extends BaseAdapter {
+    int condition=0;//条件 0为低于 1为高于
+    private void setCaseLimit(){
+        if (condition==0){
+            btn_low.setTextColor(Color.parseColor("#ffffff"));
+            btn_low.setBackground(getResources().getDrawable(R.drawable.shape_once));
+            btn_high.setTextColor(Color.parseColor("#939393"));
+            btn_high.setBackground(getResources().getDrawable(R.drawable.shape_loop));
+        }else if (condition==1){
+            btn_low.setTextColor(Color.parseColor("#939393"));
+            btn_low.setBackground(getResources().getDrawable(R.drawable.shape_loop));
+            btn_high.setTextColor(Color.parseColor("#ffffff"));
+            btn_high.setBackground(getResources().getDrawable(R.drawable.shape_once));
+        }
+    }
+    class LinesAdapter extends BaseAdapter{
 
         private Context context;
         private List<Line> list;

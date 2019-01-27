@@ -24,6 +24,9 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
+/**
+ *开关量联动设置
+ */
 public class LinkedSwitchActivity extends BaseActivity {
 
 
@@ -44,7 +47,7 @@ public class LinkedSwitchActivity extends BaseActivity {
     @Override
     public int bindLayout() {
         setSteepStatusBar(true);
-        return R.layout.activity_linked_control_temp;
+        return R.layout.activity_linked_switch;
     }
 
     @Override

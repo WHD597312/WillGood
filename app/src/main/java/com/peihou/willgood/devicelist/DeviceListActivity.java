@@ -16,6 +16,9 @@ import com.peihou.willgood.base.BaseActivity;
 import butterknife.BindView;
 import butterknife.OnClick;
 
+/**
+ * 设备列表
+ */
 public class DeviceListActivity extends BaseActivity {
 
     @BindView(R.id.tv_ps) TextView tv_ps;//配电系统

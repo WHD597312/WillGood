@@ -22,6 +22,9 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
+/**
+ * 开关量测试
+ */
 public class SwichCheckActivity extends BaseActivity {
 
     @BindView(R.id.tv_title) TextView tv_title;

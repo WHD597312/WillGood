@@ -23,6 +23,9 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
+/**
+ * 报警设置
+ */
 public class AlermActivity extends BaseActivity {
 
 

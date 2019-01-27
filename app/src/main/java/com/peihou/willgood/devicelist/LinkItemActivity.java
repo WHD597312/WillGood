@@ -29,6 +29,15 @@ import java.util.List;
 import butterknife.BindView;
 import butterknife.OnClick;
 
+/**
+ * 温度，湿度，开关量，电流，电压中的某一个的列表
+ * type=0 为温度的列表
+ * type=1 为湿度的列表
+ * type=2 为开关量的列表
+ * type=3 为电流的列表
+ * type=4 为电压的列表
+ *
+ */
 public class LinkItemActivity extends BaseActivity {
 
     String name;
@@ -52,7 +61,6 @@ public class LinkItemActivity extends BaseActivity {
         }else if (type==4){
             name="电压";
         }
-
     }
 
 
@@ -201,7 +209,7 @@ public class LinkItemActivity extends BaseActivity {
                         Intent intent=new Intent(LinkItemActivity.this,LinkedSwitchActivity.class);
                         startActivity(intent);
                     }else {
-                        Intent intent=new Intent(LinkItemActivity.this,LinkedControlItemActivity.class);
+                        Intent intent=new Intent(LinkItemActivity.this,LinkedSetActivity.class);
                         intent.putExtra("type",type);
                         startActivity(intent);
                     }
