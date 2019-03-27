@@ -66,10 +66,19 @@ public class ChangeDialog extends Dialog {
             et_name.setBackgroundColor(Color.parseColor("#f5f5f5"));
         }else if (mode==1){
             et_name.setTextSize(20);
-            et_name.setText("是否清除运动轨迹?");
+            et_name.setText(tips);
             et_name.setFocusable(false);
             et_name.setFocusableInTouchMode(false);
         }
+    }
+    private String tips;
+
+    public String getTips() {
+        return tips;
+    }
+
+    public void setTips(String tips) {
+        this.tips = tips;
     }
 
     public void setMode(int mode) {

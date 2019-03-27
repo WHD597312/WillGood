@@ -1,6 +1,7 @@
 package com.peihou.willgood.devicelist;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
@@ -9,8 +10,8 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.peihou.willgood.MainActivity;
 import com.peihou.willgood.R;
+import com.peihou.willgood.activity.MainActivity;
 import com.peihou.willgood.base.BaseActivity;
 
 import butterknife.BindView;
@@ -45,6 +46,17 @@ public class DeviceListActivity extends BaseActivity {
     public void doBusiness(Context mContext) {
 
     }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (ps==1){
+            setPsMode();
+        }else if (ps==2){
+            setKsMode();
+        }
+    }
+
     int ps=0;//为0时，表示没有操作任何系统，为1是表示操作配电系统，为2时表示操作控电系统
     @OnClick({R.id.img_back,R.id.rl_ps,R.id.rl_ks})
     public void onClick(View view){
@@ -53,18 +65,17 @@ public class DeviceListActivity extends BaseActivity {
                 finish();
                 break;
             case R.id.rl_ps:
-                if (ps==1){
-                    break;
-                }
                 ps=1;
-                setPsMode();
+                Intent intent=new Intent(this,QRScannerActivity.class);
+                intent.putExtra("type",1);
+                startActivity(intent);
                 break;
             case R.id.rl_ks:
-                if (ps==2){
-                    break;
-                }
                 ps=2;
                 setKsMode();
+                Intent intent2=new Intent(this,QRScannerActivity.class);
+                intent2.putExtra("type",2);
+                startActivity(intent2);
                 break;
         }
     }

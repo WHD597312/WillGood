@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
+import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
@@ -24,17 +25,27 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.Result;
 import com.peihou.willgood.R;
+import com.peihou.willgood.activity.MainActivity;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.base.MyApplication;
+import com.peihou.willgood.database.dao.impl.DeviceDaoImpl;
+import com.peihou.willgood.pojo.Device;
+import com.peihou.willgood.util.ToastUtil;
 import com.peihou.willgood.util.camera.CameraManager;
 import com.peihou.willgood.util.decoding.CaptureActivityHandler;
 import com.peihou.willgood.util.decoding.InactivityTimer;
+import com.peihou.willgood.util.http.BaseWeakAsyncTask;
+import com.peihou.willgood.util.http.HttpUtils;
 import com.peihou.willgood.util.view.ViewfinderView;
 
 
@@ -57,9 +68,9 @@ import pub.devrel.easypermissions.EasyPermissions;
 /**
  * 扫描二维码
  */
-public class QRScannerActivity extends AppCompatActivity implements SurfaceHolder.Callback,EasyPermissions.PermissionCallbacks {
+public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Callback,EasyPermissions.PermissionCallbacks {
 
-    ViewfinderView viewfinderView;
+    @BindView(R.id.viewfinder_view) ViewfinderView viewfinderView;
 
     private CaptureActivityHandler handler;
     private boolean hasSurface;
@@ -70,6 +81,17 @@ public class QRScannerActivity extends AppCompatActivity implements SurfaceHolde
     private boolean playBeep;
     private static final float BEEP_VOLUME = 0.10f;
     private boolean vibrate;
+    @BindView(R.id.rl_body4) RelativeLayout rl_body4;
+    @BindView(R.id.rl_body3) RelativeLayout rl_body3;
+    @BindView(R.id.tv_wifi)
+    TextView tv_wifi;//wifi添加设备
+    @BindView(R.id.tv_gprs) TextView tv_gprs;//gprs添加设备
+    @BindView(R.id.et_name)
+    EditText et_name;//gprs/wifi名称
+    @BindView(R.id.et_pswd) EditText et_pswd;//WiFi密码
+    @BindView(R.id.et_orignal_code) EditText et_orignal_code;//wifi状态下的初始码
+    DeviceDaoImpl deviceDao;
+
 
     String shareDeviceId;
     String shareContent;
@@ -77,28 +99,31 @@ public class QRScannerActivity extends AppCompatActivity implements SurfaceHolde
     private String userId;
 
     ImageView back;
-    Unbinder unbinder;
-    MyApplication application;
 
     private boolean isBound=false;
+
+
+    int addType=0;
+    int type=-1;
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    public void initParms(Bundle parms) {
+        type=parms.getInt("type");
+    }
 
-        setContentView(R.layout.activity_qrscanner);
-        if (application == null) {
-            application = (MyApplication) getApplication();
-            application.addActivity(this);
-        }
+    @Override
+    public int bindLayout() {
+        setSteepStatusBar(true);
+        return R.layout.activity_qrscanner;
+    }
 
-        viewfinderView = (ViewfinderView) findViewById(R.id.viewfinder_view);
-
-        unbinder = ButterKnife.bind(this);
+    @Override
+    public void initView(View view) {
+        deviceDao=new DeviceDaoImpl(getApplicationContext());
         init();
+    }
 
-
+    @Override
+    public void doBusiness(Context mContext) {
 
     }
 
@@ -107,6 +132,7 @@ public class QRScannerActivity extends AppCompatActivity implements SurfaceHolde
         hasSurface = false;
         inactivityTimer = new InactivityTimer(this);
     }
+
 
 
 
@@ -131,14 +157,127 @@ public class QRScannerActivity extends AppCompatActivity implements SurfaceHolde
         decodeFormats = null;
         characterSet = null;
 
+
     }
 
-    @OnClick({R.id.back})
+    int deviceModel=0;
+    @OnClick({R.id.back,R.id.img_book,R.id.rl_body3,R.id.rl_body4,R.id.bt_add_finish,R.id.tv_wifi,R.id.tv_gprs})
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.back:
                 finish();
                 break;
+            case R.id.img_book:
+                if (addType==0){
+                    addType=1;
+                    rl_body3.setVisibility(View.VISIBLE);
+                    rl_body4.setVisibility(View.GONE);
+                }else if (addType==1){
+                    addType=0;
+                    rl_body3.setVisibility(View.GONE);
+                    rl_body4.setVisibility(View.VISIBLE);
+
+                }
+                break;
+            case R.id.tv_wifi:
+                if (deviceModel==0)
+                    break;
+                tv_wifi.setTextColor(Color.parseColor("#09c585"));
+                tv_gprs.setTextColor(Color.parseColor("#646464"));
+                et_name.setHint("WiFi扫描中");
+                et_pswd.setHint("请输入WiFi密码");
+                et_orignal_code.setHint("请输入初始码");
+                et_orignal_code.setHint("请输入初始码");
+                et_orignal_code.setVisibility(View.VISIBLE);
+                et_orignal_code.setBackgroundColor(Color.parseColor("#f7f7fa"));
+                deviceModel=0;
+                break;
+            case R.id.tv_gprs:
+                if (deviceModel==1)
+                    break;
+                tv_wifi.setTextColor(Color.parseColor("#646464"));
+                tv_gprs.setTextColor(Color.parseColor("#09c585"));
+                et_name.setHint("请输入IMEI号");
+                et_pswd.setHint("请输入初始码");
+                et_orignal_code.setHint("");
+                et_orignal_code.setVisibility(View.GONE);
+                deviceModel=1;
+                break;
+            case R.id.bt_add_finish:
+                String name=et_name.getText().toString();
+                if (TextUtils.isEmpty(name)){
+                    ToastUtil.show(this,"设备IMEI不能为空",Toast.LENGTH_SHORT);
+                    break;
+                }
+
+                deviceDao.deleteAll();
+                Device device=new Device();
+                device.setDeviceOnlyMac(name.trim());
+                device.setSystem(type);
+                if (deviceDao.insert(device)){
+                    ToastUtil.show(this,"添加成功",Toast.LENGTH_SHORT);
+                    Intent intent=new Intent(this,MainActivity.class);
+                    startActivity(intent);
+                }else {
+                    ToastUtil.show(this,"添加失败",Toast.LENGTH_SHORT);
+                }
+                break;
+        }
+    }
+
+
+    class AddDeivceAsync extends BaseWeakAsyncTask<Map<String,Object>,Void,Integer,QRScannerActivity> {
+
+        public AddDeivceAsync(QRScannerActivity activity) {
+            super(activity);
+        }
+
+        @Override
+        protected Integer doInBackground(QRScannerActivity activity,Map<String, Object>... maps) {
+            String url=HttpUtils.ipAddress+ "device/addDeviceByAPP";
+            Map<String,Object> params=maps[0];
+            int code=0;
+            try {
+                String result=HttpUtils.requestPost(url,params);
+                Log.i("result","-->"+result);
+                if (!TextUtils.isEmpty(result)){
+                    JSONObject jsonObject=new JSONObject(result);
+                    code=jsonObject.getInt("returnCode");
+                    if (code==100){
+                        JSONObject returnData=jsonObject.getJSONObject("returnData");
+                        String s=returnData.toString();
+//                        Gson gson=new Gson();
+//                        device=gson.fromJson(s, com.peihou.willgood2.pojo.Device.class);
+//                        String deviceMac=device.getDeviceOnlyMac();
+//                        device.setDeviceName(deviceName);
+//                        List<Device> deleteDevices=deviceDao.findDevicesByMac(deviceMac);
+//                        deviceDao.deleteDevices(deleteDevices);
+//                        deviceDao.insert(device);
+                    }
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            return code;
+        }
+
+        @Override
+        protected void onPostExecute(QRScannerActivity activity,Integer code) {
+            switch (code){
+                case 100:
+                    ToastUtil.showShort(QRScannerActivity.this,"添加成功");
+                    Intent intent=new Intent();
+//                    intent.putExtra("device",device);
+                    setResult(100,intent);
+                    finish();
+                    break;
+                case 10007:
+                    ToastUtil.showShort(QRScannerActivity.this,"对不起您的设备初始码错误，请重置后重新添加");
+                    break;
+                default:
+                    ToastUtil.showShort(QRScannerActivity.this,"添加失败");
+                    break;
+            }
         }
     }
 
@@ -155,9 +294,6 @@ public class QRScannerActivity extends AppCompatActivity implements SurfaceHolde
     protected void onDestroy() {
         inactivityTimer.shutdown();
         super.onDestroy();
-        if (unbinder != null) {
-            unbinder.unbind();
-        }
     }
 
     /**
@@ -174,7 +310,16 @@ public class QRScannerActivity extends AppCompatActivity implements SurfaceHolde
             } else {
                 String content = resultString;
                 if (!TextUtils.isEmpty(content)) {
-                    Toast.makeText(QRScannerActivity.this, "扫描成功!", Toast.LENGTH_SHORT).show();
+                    Device device=new Device();
+                    device.setDeviceOnlyMac(content.trim());
+                    device.setSystem(type);
+                    if (deviceDao.insert(device)){
+                        ToastUtil.show(this,"添加成功",Toast.LENGTH_SHORT);
+                        Intent intent=new Intent(this,MainActivity.class);
+                        startActivity(intent);
+                    }else {
+                        ToastUtil.show(this,"添加失败",Toast.LENGTH_SHORT);
+                    }
                 }
             }
         }catch (Exception e){

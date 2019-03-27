@@ -123,8 +123,11 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     }
 
 
+    double latitude=30.179158;
+    //获取经度信息
+    double longitude=121.266949;
 
-    @OnClick({R.id.img_back,R.id.rl_position})
+    @OnClick({R.id.img_back,R.id.rl_position,R.id.img_position,R.id.img_set})
     public void onClick(View view){
         switch (view.getId()){
             case R.id.img_back:
@@ -137,6 +140,12 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
             case R.id.rl_position:
                 popupWindow();
                 break;
+            case R.id.img_position:
+                MapStatusUpdate mapStatusUpdate2=MapStatusUpdateFactory.newLatLng(new LatLng(latitude,longitude));
+                mMap.setMapStatus(mapStatusUpdate2);
+                break;
+            case R.id.img_set:
+                startActivity(LocationSetActivity.class);
 
         }
     }
@@ -375,9 +384,6 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     }
 
     String address;
-    double latitude;
-    //获取经度信息
-    double longitude;
     /**
      * 实现定位回调
      */
@@ -441,7 +447,6 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                                 discance+=DistanceUtil.getDistance(p1, p2);
                                 posints.add(positions.get(i).getLatLng());
                             }
-
                             if (posints.size()>3){
                                 //设置折线的属性
                                 OverlayOptions mOverlayOptions = new PolylineOptions()

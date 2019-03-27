@@ -1,14 +1,26 @@
 package com.peihou.willgood.pojo;
 
-public class SwtichState {
+import java.io.Serializable;
+
+public class SwtichState implements Serializable {
     private int type;
     private String name;
-    private int state;
+    private String pic;//图片地址
+    private int state;//状态，0为异常，1为正常，2为无效
 
-    public SwtichState(int type, String name, int state) {
+    public SwtichState(int type, String name, String pic, int state) {
         this.type = type;
         this.name = name;
+        this.pic=pic;
         this.state = state;
+    }
+
+    public String getPic() {
+        return pic;
+    }
+
+    public void setPic(String pic) {
+        this.pic = pic;
     }
 
     public int getType() {

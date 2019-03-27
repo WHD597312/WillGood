@@ -1,22 +1,43 @@
 package com.peihou.willgood.devicelist;
 
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.v7.app.AppCompatActivity;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.IBinder;
+import android.support.annotation.NonNull;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.PopupWindow;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+
 
 import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.pojo.SwtichState;
+import com.peihou.willgood.service.MQService;
 
+import org.json.JSONObject;
+
+import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -28,13 +49,17 @@ import butterknife.OnClick;
 public class SwichCheckActivity extends BaseActivity {
 
     @BindView(R.id.tv_title) TextView tv_title;
-    @BindView(R.id.img_add) ImageView img_add;
-    @BindView(R.id.list_linked) RecyclerView list_linked;//开关量检测视图列表
+    @BindView(R.id.list_linked)
+    RecyclerView list_linked;//开关量检测视图列表
     private List<SwtichState> list=new ArrayList<>();
     MyAdapter adapter;
+    long deviceId;
+    Map<String,Object> params=new HashMap<>();
+    String deviceMac;
+    int voice;
     @Override
     public void initParms(Bundle parms) {
-
+        deviceMac=parms.getString("deviceMac");
     }
 
     @Override
@@ -43,25 +68,29 @@ public class SwichCheckActivity extends BaseActivity {
         return R.layout.activity_linked_control;
     }
 
+    private String topicName;
     @Override
     public void initView(View view) {
         tv_title.setText("开关量检测");
-        img_add.setVisibility(View.GONE);
-        list.add(new SwtichState(0,"烟雾报警器",0));
-        list.add(new SwtichState(0,"烟雾报警器",0));
-        list.add(new SwtichState(0,"烟雾报警器",1));
-        list.add(new SwtichState(0,"烟雾报警器",0));
-        list.add(new SwtichState(0,"烟雾报警器",0));
-        list.add(new SwtichState(0,"烟雾报警器",1));
-        list.add(new SwtichState(0,"烟雾报警器",0));
-        list.add(new SwtichState(0,"烟雾报警器",0));
-        list.add(new SwtichState(0,"烟雾报警器",1));
-        list.add(new SwtichState(0,"烟雾报警器",0));
-        list.add(new SwtichState(0,"烟雾报警器",0));
-
         list_linked.setLayoutManager(new LinearLayoutManager(this));
+        list.add(new SwtichState(0,"开关量1","",0));
+        list.add(new SwtichState(0,"开关量2","",0));
+        list.add(new SwtichState(0,"开关量3","",0));
+        list.add(new SwtichState(0,"开关量4","",0));
+        list.add(new SwtichState(0,"开关量5","",0));
+        list.add(new SwtichState(0,"开关量6","",0));
+        list.add(new SwtichState(0,"开关量7","",0));
+        list.add(new SwtichState(0,"开关量8","",0));
+
+
         adapter=new MyAdapter(this,list);
+
         list_linked.setAdapter(adapter);
+
+        topicName="qjjc/gateway/"+deviceMac+"/server_to_client";
+        receiver=new MessageReceiver();
+        IntentFilter filter=new IntentFilter("SwichCheckActivity");
+        registerReceiver(receiver,filter);
     }
 
     @OnClick({R.id.img_back})
@@ -94,17 +123,21 @@ public class SwichCheckActivity extends BaseActivity {
         }
 
         @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        public void onBindViewHolder(@NonNull ViewHolder holder, final int position) {
             SwtichState state=list.get(position);
             String name=state.getName();
             int state2=state.getState();
             holder.tv_name.setText(name);
-            if (state2==0){
+            String pic=state.getPic();
+            if (state2==2){
                 holder.tv_state.setText("异常");
                 holder.img_state.setImageResource(R.mipmap.img_bad);
             }else if (state2==1){
                 holder.tv_state.setText("正常");
                 holder.img_state.setImageResource(R.mipmap.img_right);
+            }else if (state2==0){
+                holder.tv_state.setText("无效");
+                holder.img_state.setImageResource(R.mipmap.img_invalid);
             }
         }
 
@@ -114,7 +147,7 @@ public class SwichCheckActivity extends BaseActivity {
         }
     }
     class ViewHolder extends RecyclerView.ViewHolder{
-
+        @BindView(R.id.rl_item) RelativeLayout rl_item;
         @BindView(R.id.img_sa) ImageView img_sa;
         @BindView(R.id.tv_name) TextView tv_name;
         @BindView(R.id.tv_state) TextView tv_state;
@@ -124,4 +157,104 @@ public class SwichCheckActivity extends BaseActivity {
             ButterKnife.bind(this,itemView);
         }
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (receiver!=null){
+            unregisterReceiver(receiver);
+        }
+    }
+
+    MQService mqService;
+    ServiceConnection connection=new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MQService.LocalBinder binder= (MQService.LocalBinder) service;
+            mqService=binder.getService();
+            if (mqService!=null){
+                mqService.getData(topicName,0x55);
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    };
+
+    MessageReceiver receiver;
+    class MessageReceiver extends BroadcastReceiver{
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            try {
+                String macAddress=intent.getStringExtra("macAddress");
+                if (macAddress.equals(deviceMac)){
+                    int switchState1=intent.getIntExtra("switchState1",0);
+                    int switchState2=intent.getIntExtra("switchState2",0);
+                    int switchState3=intent.getIntExtra("switchState3",0);
+                    int switchState4=intent.getIntExtra("switchState4",0);
+                    int switchState5=intent.getIntExtra("switchState5",0);
+                    int switchState6=intent.getIntExtra("switchState6",0);
+                    int switchState7=intent.getIntExtra("switchState7",0);
+                    int switchState8=intent.getIntExtra("switchState8",0);
+                    if (list!=null && list.size()==8){
+                        SwtichState swtichState=list.get(0);
+                        SwtichState swtichState2=list.get(1);
+                        SwtichState swtichState3=list.get(2);
+                        SwtichState swtichState4=list.get(3);
+                        SwtichState swtichState5=list.get(4);
+                        SwtichState swtichState6=list.get(5);
+                        SwtichState swtichState7=list.get(6);
+                        SwtichState swtichState8=list.get(7);
+                        swtichState.setState(switchState1);
+                        swtichState2.setState(switchState2);
+                        swtichState3.setState(switchState3);
+                        swtichState4.setState(switchState4);
+                        swtichState5.setState(switchState5);
+                        swtichState6.setState(switchState6);
+                        swtichState7.setState(switchState7);
+                        swtichState8.setState(switchState8);
+
+                        list.set(0,swtichState);
+                        list.set(1,swtichState2);
+                        list.set(2,swtichState3);
+                        list.set(3,swtichState4);
+                        list.set(4,swtichState5);
+                        list.set(5,swtichState6);
+                        list.set(6,swtichState7);
+                        list.set(7,swtichState8);
+                        adapter.notifyDataSetChanged();
+                    }
+
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public int load=0;
+    public static boolean running=false;
+    @Override
+    protected void onStart() {
+        super.onStart();
+        running=true;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        running=false;
+    }
+
+
+    //设置蒙版
+    private void backgroundAlpha(float f) {
+        WindowManager.LayoutParams lp =getWindow().getAttributes();
+        lp.alpha = f;
+        getWindow().setAttributes(lp);
+    }
+
 }

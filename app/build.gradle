@@ -1,8 +1,28 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
+apply plugin: 'org.greenrobot.greendao'
+apply plugin: 'com.mob.sdk'
 
+// 依赖插件脚本
+MobSDK {
+    appKey "2a28ae3592ef8"
+    appSecret "b875cf43521ed4503a8a6dfc993b7011"
+
+    SMSSDK {}
+}
+greendao {
+    schemaVersion 5
+    daoPackage 'com.peihou.willgood.database.dao'
+    targetGenDir 'src/main/java'
+}
 android {
+    lintOptions {
+        checkReleaseBuilds false
+        // Or, if you prefer, you can continue to check for errors in release builds,
+        // but continue the build even when errors are found:
+        abortOnError false
+    }
     signingConfigs {
         release {
             keyAlias 'key0'
@@ -24,6 +44,11 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            //选择要添加的对应cpu类型的.so库。
+            abiFilters 'armeabi', 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64', 'mips', 'mips64'
+        }
     }
     buildTypes {
         release {
@@ -45,6 +70,8 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    implementation 'org.greenrobot:greendao:3.1.0'
+    implementation 'org.greenrobot:greendao-generator:3.1.0'
     implementation 'com.jakewharton:butterknife:8.8.1'
     annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1'
     implementation 'com.mcxiaoke.volley:library:1.0.19'
@@ -52,6 +79,14 @@ dependencies {
     implementation 'com.github.Jay-Goo:RangeSeekBar:v2.0.6'
     implementation 'pub.devrel:easypermissions:1.0.1'
     implementation 'com.google.zxing:core:3.2.1'
-
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.squareup.okhttp3:okhttp:3.4.1'
+    implementation 'com.google.code.gson:gson:2.8.2'
+    implementation 'org.jsoup:jsoup:1.11.2'
+    implementation 'com.squareup.retrofit2:retrofit:2.1.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.1.0'
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.1'
+    implementation 'com.github.bumptech.glide:glide:3.7.0'
+
+
 }

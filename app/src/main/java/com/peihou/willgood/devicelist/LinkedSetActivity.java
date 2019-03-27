@@ -1,6 +1,7 @@
 package com.peihou.willgood.devicelist;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.support.annotation.NonNull;
@@ -25,7 +26,9 @@ import com.peihou.willgood.pojo.Link;
 import com.peihou.willgood.util.ToastUtil;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -49,8 +52,11 @@ public class LinkedSetActivity extends BaseActivity {
     @BindView(R.id.btn_loop) TextView btn_loop;//循环触发
     @BindView(R.id.btn_low) TextView btn_low;//低于按钮
     @BindView(R.id.btn_high) TextView btn_high;//高于按钮
+    @BindView(R.id.btn_open) TextView btn_open;//控制状态开
+    @BindView(R.id.btn_close) TextView btn_close;//控制状态关
     LinesAdapter adapter;
     int type=0;
+    int value=0;
     @Override
     public void initParms(Bundle parms) {
         type=parms.getInt("type");
@@ -108,7 +114,8 @@ public class LinkedSetActivity extends BaseActivity {
         slide_bar.setOnRangeChangedListener(new OnRangeChangedListener() {
             @Override
             public void onRangeChanged(RangeSeekBar view, float leftValue, float rightValue, boolean isFromUser) {
-
+                value=Math.round(leftValue);
+                Log.i("OnRangeChangedListener","-->"+value);
             }
 
             @Override
@@ -128,14 +135,19 @@ public class LinkedSetActivity extends BaseActivity {
 
     }
 
-    @OnClick({R.id.img_back,R.id.btn_low,R.id.btn_high,R.id.btn_once,R.id.btn_loop,R.id.img_ensure})
+    @OnClick({R.id.img_back,R.id.btn_low,R.id.btn_high,R.id.btn_once,R.id.btn_loop,R.id.img_ensure,R.id.btn_open,R.id.btn_close})
     public void onClick(View view){
         switch (view.getId()){
             case R.id.img_back:
                 finish();
                 break;
             case R.id.img_ensure:
-                ToastUtil.show(this,"设置成功",0);
+                Intent intent=new Intent();
+                intent.putExtra("value",value);
+                intent.putExtra("condition",condition);
+                intent.putExtra("controlState",controlState);
+                intent.putIntegerArrayListExtra("lines",linesList);
+                setResult(1000,intent);
                 finish();
                 break;
             case R.id.btn_low:
@@ -151,6 +163,20 @@ public class LinkedSetActivity extends BaseActivity {
                 }
                 condition=1;
                 setCaseLimit();
+                break;
+            case R.id.btn_open:
+                if (controlState==0){
+                    break;
+                }
+                controlState=0;
+                setControlState();
+                break;
+            case R.id.btn_close:
+                if (controlState==1){
+                    break;
+                }
+                controlState=1;
+                setControlState();
                 break;
             case R.id.btn_once:
                 if (touch==0){
@@ -197,6 +223,21 @@ public class LinkedSetActivity extends BaseActivity {
             btn_high.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
     }
+    int controlState=0;
+    private void setControlState(){
+        if (controlState==0){
+            btn_open.setTextColor(Color.parseColor("#ffffff"));
+            btn_open.setBackground(getResources().getDrawable(R.drawable.shape_once));
+            btn_close.setTextColor(Color.parseColor("#939393"));
+            btn_close.setBackground(getResources().getDrawable(R.drawable.shape_loop));
+        }else if (controlState==1){
+            btn_open.setTextColor(Color.parseColor("#939393"));
+            btn_open.setBackground(getResources().getDrawable(R.drawable.shape_loop));
+            btn_close.setTextColor(Color.parseColor("#ffffff"));
+            btn_close.setBackground(getResources().getDrawable(R.drawable.shape_once));
+        }
+    }
+    ArrayList<Integer> linesList=new ArrayList<>();
     class LinesAdapter extends BaseAdapter{
 
         private Context context;
@@ -236,12 +277,19 @@ public class LinkedSetActivity extends BaseActivity {
             boolean onClick=line.isOnClick();
             String name=line.getName();
             viewHolder.tv_line.setText(name+"");
+
             if (onClick){
                 viewHolder.tv_line.setTextColor(Color.parseColor("#ffffff"));
                 viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_once));
+                if (!linesList.contains(position)){
+                    linesList.add(position);
+                }
             }else {
                 viewHolder.tv_line.setTextColor(Color.parseColor("#939393"));
                 viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_loop));
+                if (linesList.contains(position)){
+                    linesList.remove(position);
+                }
             }
             return convertView;
         }

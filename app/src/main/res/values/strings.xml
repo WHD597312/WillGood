@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">强将金彩</string>
+    <string name="app_name">LED云管家</string>
     <string name="location">定位</string>
     <string name="camer">请打开相机权限</string>
     <string name="cancle">取消</string>

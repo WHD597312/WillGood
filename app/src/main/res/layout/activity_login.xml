@@ -45,11 +45,11 @@
 
         <ImageView
             android:id="@+id/img_logo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="@dimen/dp_80"
+            android:layout_height="@dimen/dp_80"
             android:layout_centerHorizontal="true"
-            android:scaleType="centerInside"
-            android:src="@mipmap/logo" />
+            android:scaleType="centerCrop"
+            android:src="@mipmap/logo2" />
 
         <RelativeLayout
             android:id="@+id/rl_phone"

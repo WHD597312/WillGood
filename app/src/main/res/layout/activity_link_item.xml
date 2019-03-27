@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7F7F7"
+    android:background="@color/base_back"
+    android:fitsSystemWindows="true"
     >
 
 
@@ -30,7 +31,20 @@
             android:gravity="center"
             android:text="联动控制"
             android:textColor="#4b4b4b"
-            android:textSize="@dimen/sp_20" />
+            android:textSize="@dimen/sp_20"
+            />
+
+        <ImageView
+            android:id="@+id/img_add"
+            android:layout_width="@dimen/dp_40"
+            android:layout_height="@dimen/dp_40"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="@dimen/dp_20"
+            android:src="@mipmap/img_add"
+            android:scaleType="centerInside"
+            />
+
     </RelativeLayout>
     <android.support.v7.widget.RecyclerView
         android:id="@+id/list_linked"

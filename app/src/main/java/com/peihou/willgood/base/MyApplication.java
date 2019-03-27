@@ -118,6 +118,11 @@ public class MyApplication extends Application {
             activity.finish();
         }
     }
+    public void removeActiviies(List<Activity> activities){
+        for (Activity activity:activities){
+            removeActivity(activity);
+        }
+    }
 
     public List<Activity> getActivities() {
         return activities;
