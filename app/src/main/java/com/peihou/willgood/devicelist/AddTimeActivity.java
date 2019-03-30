@@ -23,6 +23,7 @@ import android.widget.NumberPicker;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 
+
 import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.custom.CustomDatePicker;
@@ -33,7 +34,6 @@ import com.peihou.willgood.pojo.TimerTask;
 import com.peihou.willgood.service.MQService;
 import com.peihou.willgood.util.TenTwoUtil;
 import com.peihou.willgood.util.ToastUtil;
-
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -89,6 +89,8 @@ public class AddTimeActivity extends BaseActivity {
     private DeviceLineDaoImpl deviceLineDao;
     TimerTaskDaoImpl timerTaskDao;
 
+    String[] hours=new String[24];
+    String[] mins=new String[60];
     @Override
     public void initParms(Bundle parms) {
         deviceId = parms.getLong("deviceId");
@@ -221,7 +223,7 @@ public class AddTimeActivity extends BaseActivity {
 
                     preLine = TenTwoUtil.changeToTen2(preLines);
                     lastLine = TenTwoUtil.changeToTen2(lastLines);
-                    if (preLine == 0 && lastLine == 0) {
+                    if (preLine+lastLine == 0) {
                         ToastUtil.showShort(this, "请选择线路");
                         break;
                     }
@@ -257,7 +259,7 @@ public class AddTimeActivity extends BaseActivity {
                         ToastUtil.showShort(this, "请选择星期");
                         break;
                     }
-                    if (preLine == 0 && lastLine == 0) {
+                    if (preLine+lastLine == 0) {
                         ToastUtil.showShort(this, "请选择线路");
                         break;
                     }
@@ -387,11 +389,11 @@ public class AddTimeActivity extends BaseActivity {
         if (open == 1) {
             btnControlOpen.setTextColor(getResources().getColor(R.color.base_back));
             btnControlOpen.setBackground(getResources().getDrawable(R.drawable.shape_once));
-            btnControlClose.setTextColor(getResources().getColor(R.color.white));
-            btnControlClose.setBackgroundColor(0);
+            btnControlClose.setTextColor(getResources().getColor(R.color.gray2));
+            btnControlClose.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
         } else if (open == 0) {
-            btnControlOpen.setTextColor(getResources().getColor(R.color.white));
-            btnControlOpen.setBackgroundColor(0);
+            btnControlOpen.setTextColor(getResources().getColor(R.color.gray2));
+            btnControlOpen.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
             btnControlClose.setTextColor(getResources().getColor(R.color.base_back));
             btnControlClose.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
@@ -401,11 +403,11 @@ public class AddTimeActivity extends BaseActivity {
         if (only == 0) {
             tv_timer_single.setTextColor(getResources().getColor(R.color.base_back));
             tv_timer_single.setBackground(getResources().getDrawable(R.drawable.shape_once));
-            tv_timer_loop.setTextColor(getResources().getColor(R.color.white));
-            tv_timer_loop.setBackgroundColor(0);
+            tv_timer_loop.setTextColor(getResources().getColor(R.color.gray2));
+            tv_timer_loop.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
         } else if (only == 1) {
-            tv_timer_single.setTextColor(getResources().getColor(R.color.white));
-            tv_timer_single.setBackgroundColor(0);
+            tv_timer_single.setTextColor(getResources().getColor(R.color.gray2));
+            tv_timer_single.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
             tv_timer_loop.setTextColor(getResources().getColor(R.color.base_back));
             tv_timer_loop.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
@@ -494,6 +496,27 @@ public class AddTimeActivity extends BaseActivity {
             tv_month.setVisibility(View.GONE);
             tv_day.setVisibility(View.GONE);
         }
+
+
+
+        timerHour = view.findViewById(R.id.timerHour);
+//        timerHour.setDisplayedValues(hours);
+
+        setNumberPickerDivider(timerHour);
+        timerHour.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
+        timerHour.setMaxValue(23);
+        timerHour.setMinValue(0);
+        timerHour.setValue(hour);
+
+        timerMin = view.findViewById(R.id.timerMin);
+
+        setNumberPickerDivider(timerMin);
+        timerMin.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
+
+//        timerMin.setDisplayedValues(mins);
+        timerMin.setMaxValue(59);
+        timerMin.setMinValue(0);
+        timerMin.setValue(min);
         if (only == 0) {
             String time = "";
             String ss = "" + month;
@@ -526,26 +549,6 @@ public class AddTimeActivity extends BaseActivity {
             time=ss+":"+sss;
             tv_timer_value.setText(time);
         }
-
-
-        timerHour = view.findViewById(R.id.timerHour);
-//        timerHour.setDisplayedValues(hours);
-
-        setNumberPickerDivider(timerHour);
-        timerHour.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
-        timerHour.setMaxValue(23);
-        timerHour.setMinValue(0);
-        timerHour.setValue(hour);
-
-        timerMin = view.findViewById(R.id.timerMin);
-
-        setNumberPickerDivider(timerMin);
-        timerMin.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
-
-//        timerMin.setDisplayedValues(mins);
-        timerMin.setMaxValue(59);
-        timerMin.setMinValue(0);
-        timerMin.setValue(min);
 
 
 
@@ -694,7 +697,7 @@ public class AddTimeActivity extends BaseActivity {
                 viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_once));
                 viewHolder.tv_line.setTextColor(getResources().getColor(R.color.base_back));
             } else {
-                viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_once));
+                viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
                 viewHolder.tv_line.setTextColor(getResources().getColor(R.color.gray2));
             }
 

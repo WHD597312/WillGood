@@ -142,10 +142,8 @@ public class ResetPswdActivity extends BaseActivity {
                     @SuppressWarnings("unchecked") HashMap<String, Object> phoneMap = (HashMap<String, Object>) data;
                     String country = (String) phoneMap.get("country");
                     String phone = (String) phoneMap.get("phone");
-                    Log.d(TAG, "提交验证码成功--country=" + country + "--phone" + phone);
                 } else if (event == SMSSDK.EVENT_GET_VERIFICATION_CODE) {
                     //获取验证码成功
-                    Log.d(TAG, "获取验证码成功");
                 } else if (event == SMSSDK.EVENT_GET_SUPPORTED_COUNTRIES) {
                     //返回支持发送验证码的国家列表
                 }

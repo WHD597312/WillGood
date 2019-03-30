@@ -34,6 +34,13 @@ public class TimerTaskDaoImpl {
     public void update(TimerTask timerTask){
         taskDao.update(timerTask);
     }
+    /**
+     * 批量更新定时
+     * @param timerTasks
+     */
+    public void updateTimers(List<TimerTask> timerTasks){
+        taskDao.updateInTx(timerTasks);
+    }
     public void delete(TimerTask timerTask){
         taskDao.delete(timerTask);
     }
@@ -41,7 +48,8 @@ public class TimerTaskDaoImpl {
         return taskDao.queryBuilder().where(TimerTaskDao.Properties.DeviceId.eq(deviceId)).list();
     }
     public List<TimerTask> findDeviceTimeTask(String deviceMac){
-        return taskDao.queryBuilder().where(TimerTaskDao.Properties.DeviceMac.eq(deviceMac)).list();
+        WhereCondition whereCondition=taskDao.queryBuilder().and(TimerTaskDao.Properties.DeviceMac.eq(deviceMac),TimerTaskDao.Properties.Visitity.eq(1));
+        return taskDao.queryBuilder().where(whereCondition).list();
     }
     public void deleteTimers(String deviceMac){
         List<TimerTask> timerTasks=findDeviceTimeTask(deviceMac);

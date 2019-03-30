@@ -74,11 +74,9 @@ public class LoginActivity extends BaseActivity {
                 if (exit==1){
                     sharedPreferences.edit().remove("password").commit();
                     password="";
+                    et_phone.setText(phone);
                 }else if (exit==0){
-                    int userId=sharedPreferences.getInt("userId",0);
-                    Intent intent=new Intent(LoginActivity.this, MainActivity.class);
-                    intent.putExtra("login",1);
-                    intent.putExtra("userId",userId);
+                    Intent intent=new Intent(LoginActivity.this,MainActivity.class);
                     startActivity(intent);
 //                    new LoginAsync(LoginActivity.this).execute(params);
 //                    startActivity(DeviceListActivity.class);
@@ -87,8 +85,6 @@ public class LoginActivity extends BaseActivity {
                 e.printStackTrace();
             }
         }
-        et_phone.setText(phone);
-        et_pswd.setText(password);
     }
 
     @Override
@@ -292,8 +288,6 @@ public class LoginActivity extends BaseActivity {
                             params.clear();
                             params.put("userId",userId);
                             Intent intent=new Intent(LoginActivity.this,MainActivity.class);
-                            intent.putExtra("login",1);
-                            intent.putExtra("userId",userId);
                             startActivity(intent);
 //                            new LoadDeviceListAsync(LoginActivity.this).execute(params);
                         }

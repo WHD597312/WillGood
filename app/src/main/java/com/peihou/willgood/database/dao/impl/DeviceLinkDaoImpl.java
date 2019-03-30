@@ -101,7 +101,11 @@ public class DeviceLinkDaoImpl {
      * @return
      */
     public List<Linked>findLinkeds(String deviceMac, int type){
-        WhereCondition whereCondition=linkedDao.queryBuilder().and(LinkedDao.Properties.DeviceMac.eq(deviceMac),LinkedDao.Properties.Type.eq(type));
+        WhereCondition whereCondition=linkedDao.queryBuilder().and(
+                LinkedDao.Properties.DeviceMac.eq(deviceMac),
+                LinkedDao.Properties.Type.eq(type),
+                LinkedDao.Properties.Visitity.eq(1)
+        );
         return linkedDao.queryBuilder().where(whereCondition).list();
     }
 

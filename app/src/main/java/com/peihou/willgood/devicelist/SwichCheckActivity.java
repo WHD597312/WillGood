@@ -91,6 +91,8 @@ public class SwichCheckActivity extends BaseActivity {
         receiver=new MessageReceiver();
         IntentFilter filter=new IntentFilter("SwichCheckActivity");
         registerReceiver(receiver,filter);
+        Intent service=new Intent(this,MQService.class);
+        bind=bindService(service,connection,Context.BIND_AUTO_CREATE);
     }
 
     @OnClick({R.id.img_back})
@@ -164,8 +166,12 @@ public class SwichCheckActivity extends BaseActivity {
         if (receiver!=null){
             unregisterReceiver(receiver);
         }
+        if (bind){
+            unbindService(connection);
+        }
     }
 
+    boolean bind=false;
     MQService mqService;
     ServiceConnection connection=new ServiceConnection() {
         @Override

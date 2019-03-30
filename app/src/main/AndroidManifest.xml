@@ -71,16 +71,25 @@
             android:name=".service.MQService"
             android:enabled="true"
             android:exported="true" />
+        <receiver
+            android:name=".receiver.MQTTMessageReveiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="mqttmessage" />
+            </intent-filter>
+        </receiver>
+
 
         <activity
-            android:name=".login.LoginActivity">
+            android:name=".activity.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".activity.MainActivity" />
+        <!--<activity android:name=".activity.MainActivity" />-->
         <activity android:name=".devicelist.DeviceListActivity" />
         <activity android:name=".devicelist.TimerTaskActivity" />
         <activity android:name=".devicelist.AddTimeActivity" />
@@ -98,5 +107,4 @@
         <activity android:name=".devicelist.LocationSetActivity"/>
         <activity android:name="com.peihou.willgood.login.ResetPswdActivity"/>
     </application>
-
 </manifest>

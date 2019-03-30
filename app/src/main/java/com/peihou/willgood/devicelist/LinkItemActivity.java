@@ -14,6 +14,7 @@ import android.support.annotation.NonNull;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,6 +27,7 @@ import android.widget.TextView;
 import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.custom.ChangeDialog;
+import com.peihou.willgood.database.dao.impl.DeviceLineDaoImpl;
 import com.peihou.willgood.database.dao.impl.DeviceLinkDaoImpl;
 import com.peihou.willgood.pojo.Linked;
 import com.peihou.willgood.service.MQService;
@@ -87,6 +89,10 @@ public class LinkItemActivity extends BaseActivity {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.img_back:
+                if (!list.isEmpty()){
+                    List<Linked> linkeds=updateLinkeds(list);
+                    mqService.updateLinkeds(linkeds);
+                }
                 finish();
                 break;
             case R.id.img_add:
@@ -162,6 +168,23 @@ public class LinkItemActivity extends BaseActivity {
         running = false;
     }
 
+    @Override
+    public void onBackPressed() {
+        if (!list.isEmpty()){
+            List<Linked> linkeds=updateLinkeds(list);
+            mqService.updateLinkeds(linkeds);
+        }
+        super.onBackPressed();
+    }
+
+    private List<Linked> updateLinkeds(List<Linked> linkeds){
+        for (int i = 0; i <linkeds.size() ; i++) {
+            Linked linked=linkeds.get(i);
+            linked.setVisitity(0);
+            linkeds.set(i,linked);
+        }
+        return linkeds;
+    }
     MQService mqService;
     ServiceConnection connection = new ServiceConnection() {
         @Override
@@ -184,6 +207,8 @@ public class LinkItemActivity extends BaseActivity {
                     funCode = 0x39;
                 }
                 mqService.getData(topicName, funCode);
+                countTimer.start();
+
             }
         }
 
@@ -214,12 +239,12 @@ public class LinkItemActivity extends BaseActivity {
                     }
                     int linkType = intent.getIntExtra("linkType", -1);
                     if (macAddress.equals(deviceMac) && linkType == type) {
-                        int operate = intent.getIntExtra("operate", 0);
-                        if (operate == 1) {
-                            mqService.starSpeech(deviceMac,"删除成功");
-                        } else {
-                            mqService.starSpeech(deviceMac,"设置成功");
-                        }
+//                        int operate = intent.getIntExtra("operate", 0);
+//                        if (operate == 1) {
+//                            mqService.starSpeech(deviceMac,"删除成功");
+//                        } else {
+//                            mqService.starSpeech(deviceMac,"设置成功");
+//                        }
                             List<Linked> linkeds = mqService.getLinkeds(deviceMac, linkType);
                             list.clear();
                             list.addAll(linkeds);
@@ -268,6 +293,7 @@ public class LinkItemActivity extends BaseActivity {
             public void onPositiveClick() {
                     Linked linked = list.get(postion);
                     linked.setState(2);
+
                     if (mqService != null) {
                         dialog.dismiss();
                         boolean success = mqService.sendLinkedSet(topicName, linked);
@@ -433,9 +459,10 @@ public class LinkItemActivity extends BaseActivity {
                     funCode = 0x38;
                 }
                 returnData = 1;
-                mqService.getData(topicName, funCode);
+//                mqService.getData(topicName, funCode);
                 Linked linked = (Linked) data.getSerializableExtra("linked");
                 if (linked != null) {
+                    Log.i("topicName","-->"+topicName);
                     mqService.sendLinkedSet(topicName, linked);
                     add = 1;
                     countTimer.start();
@@ -488,7 +515,8 @@ public class LinkItemActivity extends BaseActivity {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        if (popupWindow2==null)
+            popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
         popupWindow2.setFocusable(false);

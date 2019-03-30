@@ -39,7 +39,10 @@ import com.peihou.willgood.activity.MainActivity;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.base.MyApplication;
 import com.peihou.willgood.database.dao.impl.DeviceDaoImpl;
+import com.peihou.willgood.database.dao.impl.DeviceLineDaoImpl;
 import com.peihou.willgood.pojo.Device;
+import com.peihou.willgood.pojo.Line;
+import com.peihou.willgood.pojo.Line2;
 import com.peihou.willgood.util.ToastUtil;
 import com.peihou.willgood.util.camera.CameraManager;
 import com.peihou.willgood.util.decoding.CaptureActivityHandler;
@@ -52,6 +55,7 @@ import com.peihou.willgood.util.view.ViewfinderView;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,19 +94,8 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
     EditText et_name;//gprs/wifi名称
     @BindView(R.id.et_pswd) EditText et_pswd;//WiFi密码
     @BindView(R.id.et_orignal_code) EditText et_orignal_code;//wifi状态下的初始码
-    DeviceDaoImpl deviceDao;
-
-
-    String shareDeviceId;
-    String shareContent;
-    String shareMacAddress;
-    private String userId;
-
-    ImageView back;
-
-    private boolean isBound=false;
-
-
+    DeviceDaoImpl deviceDao;//设备表操作对象
+    DeviceLineDaoImpl deviceLineDao;//设备线路表操作对象
     int addType=0;
     int type=-1;
     @Override
@@ -119,6 +112,7 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
     @Override
     public void initView(View view) {
         deviceDao=new DeviceDaoImpl(getApplicationContext());
+        deviceLineDao=new DeviceLineDaoImpl(getApplicationContext());
         init();
     }
 
@@ -159,7 +153,7 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
 
 
     }
-
+    List<Line2> lines=new ArrayList<>();//设备线路列表 总共16路
     int deviceModel=0;
     @OnClick({R.id.back,R.id.img_book,R.id.rl_body3,R.id.rl_body4,R.id.bt_add_finish,R.id.tv_wifi,R.id.tv_gprs})
     public void onClick(View view) {
@@ -209,8 +203,12 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
                     ToastUtil.show(this,"设备IMEI不能为空",Toast.LENGTH_SHORT);
                     break;
                 }
-
                 deviceDao.deleteAll();
+                deviceLineDao.deleteAll();
+                for (int i = 1; i <17 ; i++) {
+                    lines.add(new Line2(false,i+"路",0,false,i,name.trim()));
+                }
+                deviceLineDao.insertDeviceLines(lines);
                 Device device=new Device();
                 device.setDeviceOnlyMac(name.trim());
                 device.setSystem(type);
@@ -308,20 +306,27 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
             if (TextUtils.isEmpty(resultString)) {
                 Toast.makeText(QRScannerActivity.this, "扫描失败!", Toast.LENGTH_SHORT).show();
             } else {
-                String content = resultString;
-                if (!TextUtils.isEmpty(content)) {
-                    Device device=new Device();
-                    device.setDeviceOnlyMac(content.trim());
-                    device.setSystem(type);
-                    if (deviceDao.insert(device)){
-                        ToastUtil.show(this,"添加成功",Toast.LENGTH_SHORT);
-                        Intent intent=new Intent(this,MainActivity.class);
-                        startActivity(intent);
-                    }else {
-                        ToastUtil.show(this,"添加失败",Toast.LENGTH_SHORT);
-                    }
+                String name=resultString;
+                if (TextUtils.isEmpty(name)){
+                    ToastUtil.show(this,"设备IMEI不能为空",Toast.LENGTH_SHORT);
+                    return;
                 }
-            }
+                deviceDao.deleteAll();
+                deviceLineDao.deleteAll();
+                for (int i = 1; i <17 ; i++) {
+                    lines.add(new Line2(false,i+"路",0,false,i,name.trim()));
+                }
+                deviceLineDao.insertDeviceLines(lines);
+                Device device=new Device();
+                device.setDeviceOnlyMac(name.trim());
+                device.setSystem(type);
+                if (deviceDao.insert(device)){
+                    ToastUtil.show(this,"添加成功",Toast.LENGTH_SHORT);
+                    Intent intent=new Intent(this,MainActivity.class);
+                    startActivity(intent);
+                }else {
+                    ToastUtil.show(this,"添加失败",Toast.LENGTH_SHORT);
+                }            }
         }catch (Exception e){
             e.printStackTrace();
         }

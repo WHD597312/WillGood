@@ -28,6 +28,7 @@ import com.peihou.willgood.service.MQService;
 import com.peihou.willgood.util.TenTwoUtil;
 import com.peihou.willgood.util.ToastUtil;
 
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,7 +67,6 @@ public class TempLinkedSetActivity extends BaseActivity {
     LinesAdapter adapter;
     private DeviceLineDaoImpl deviceLineDao;//设备线路表的操作对象
     private DeviceLinkDaoImpl deviceLinkDao;//设备联动表的操作对象
-
     private String topicName;
     int analog;//模拟量
 
@@ -117,7 +117,9 @@ public class TempLinkedSetActivity extends BaseActivity {
 //        topicName = "qjjc/gateway/" + deviceMac + "/client_to_server";
         deviceLineDao = new DeviceLineDaoImpl(getApplicationContext());
 
-            deviceLinkDao = new DeviceLinkDaoImpl(getApplicationContext());
+
+        deviceLinkDao = new DeviceLinkDaoImpl(getApplicationContext());
+
         lines = deviceLineDao.findDeviceOnlineLines(deviceId);
         Intent service = new Intent(this, MQService.class);
         bind = bindService(service, connection, Context.BIND_AUTO_CREATE);
@@ -177,10 +179,10 @@ public class TempLinkedSetActivity extends BaseActivity {
     int touch = 0;//为0是单次触发，1为多次触发
     int preLines = 0;
     int lastLines = 0;
+
+    StringBuffer sb = new StringBuffer();
     int[] pre = new int[8];
     int[] last = new int[8];
-    StringBuffer sb = new StringBuffer();
-
     @OnClick({R.id.img_back, R.id.btn_low, R.id.btn_high, R.id.btn_once, R.id.btn_loop, R.id.img_ensure, R.id.btn_open, R.id.btn_close})
     public void onClick(View view) {
         switch (view.getId()) {
@@ -188,67 +190,37 @@ public class TempLinkedSetActivity extends BaseActivity {
                 finish();
                 break;
             case R.id.img_ensure:
-                    Linked linked2 = null;
-                    sb.setLength(0);
-                    List<Linked> linkeds = deviceLinkDao.findLinkeds(deviceMac, type);
-                    if (linkeds != null && !linkeds.isEmpty()) {
-                        int size = linkeds.size();
-                        if (type == 5) {
-
+                Linked linked2 = null;
+                for (int i = 0; i < lines.size(); i++) {
+                    Line2 line2 = lines.get(i);
+                    int deviceLineNum = line2.getDeviceLineNum() - 1;
+                    if (deviceLineNum < 8) {
+                        if (line2.isOnClick()) {
+                            pre[7 - deviceLineNum] = 1;
                         } else {
-                            s = s + size;
+                            pre[7 - deviceLineNum] = 0;
                         }
-                    } else if (linkeds == null || linkeds.isEmpty()) {
-                        if (type == 5) {
-
+                    } else if (deviceLineNum >= 8) {
+                        if (line2.isOnClick()) {
+                            last[7 - (deviceLineNum - 8)] = 1;
                         } else {
-                            s = s + 1;
+                            last[7 - (deviceLineNum - 8)] = 0;
                         }
                     }
-                    for (int i = 0; i < lines.size(); i++) {
-                        Line2 line2 = lines.get(i);
-                        int deviceLineNum = line2.getDeviceLineNum() - 1;
-                        String name = line2.getName();
-                        if (deviceLineNum < 8) {
-                            if (line2.isOnClick()) {
-                                pre[7 - deviceLineNum] = 1;
-                                sb.append(name + ",");
-                            } else {
-                                pre[7 - deviceLineNum] = 0;
-                            }
-                        } else if (deviceLineNum >= 8) {
-                            if (line2.isOnClick()) {
-                                last[7 - (deviceLineNum - 8)] = 1;
-                                sb.append(name + ",");
-                            } else {
-                                last[7 - (deviceLineNum - 8)] = 0;
-                            }
-                        }
-                    }
-                    preLines = TenTwoUtil.changeToTen(pre);
-                    lastLines = TenTwoUtil.changeToTen(last);
-                    if (preLines == 0 && preLines == 0) {
-                        ToastUtil.showShort(this, "请选择线路");
-                        break;
-                    }
-                    value=value+128;
+                }
+                preLines = TenTwoUtil.changeToTen(pre);
+                lastLines = TenTwoUtil.changeToTen(last);
+                if (preLines + lastLines == 0) {
+                    ToastUtil.showShort(this, "请选择线路");
+                    break;
+                };
+                touch=touch==1?0:1;
 
-                    Linked linked = new Linked(deviceMac, type, s, value, condition, controlState, 1, preLines, lastLines, touch);
-                    String lines = sb.toString() + "";
-                    if (!TextUtils.isEmpty(lines)) {
-                        char ch = lines.charAt(lines.length() - 1);
-                        if (',' == ch) {
-                            lines = lines.substring(0, lines.length() - 1);
-                        }
-                    } else {
-                        lines = "";
-                    }
-                    linked.setLines(lines);
-                    Intent intent = new Intent();
-                    intent.putExtra("linked", linked);
-                    setResult(1000, intent);
-                    finish();
-
+                Linked linked = new Linked(deviceMac, type, "", value, condition, controlState, 1, preLines, lastLines, touch);
+                Intent intent = new Intent();
+                intent.putExtra("linked", linked);
+                setResult(1000, intent);
+                finish();
                 break;
             case R.id.btn_low:
                 if (condition == 0) {
@@ -321,11 +293,11 @@ public class TempLinkedSetActivity extends BaseActivity {
         if (touch == 0) {
             btn_once.setTextColor(getResources().getColor(R.color.base_back));
             btn_once.setBackground(getResources().getDrawable(R.drawable.shape_loop));
-            btn_loop.setTextColor(getResources().getColor(R.color.white));
-            btn_loop.setBackgroundColor(0);
+            btn_loop.setTextColor(getResources().getColor(R.color.gray2));
+            btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
         } else if (touch == 1) {
-            btn_once.setTextColor(getResources().getColor(R.color.white));
-            btn_once.setBackgroundColor(0);
+            btn_once.setTextColor(getResources().getColor(R.color.gray2));
+            btn_once.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
             btn_loop.setTextColor(getResources().getColor(R.color.base_back));
             btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
@@ -335,11 +307,11 @@ public class TempLinkedSetActivity extends BaseActivity {
         if (condition == 0) {
             btn_low.setTextColor(getResources().getColor(R.color.base_back));
             btn_low.setBackground(getResources().getDrawable(R.drawable.shape_once));
-            btn_high.setTextColor(getResources().getColor(R.color.white));
-            btn_high.setBackgroundColor(0);
+            btn_high.setTextColor(getResources().getColor(R.color.gray2));
+            btn_high.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
         } else if (condition == 1) {
-            btn_low.setTextColor(getResources().getColor(R.color.white));
-            btn_low.setBackgroundColor(0);
+            btn_low.setTextColor(getResources().getColor(R.color.gray2));
+            btn_low.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
             btn_high.setTextColor(getResources().getColor(R.color.base_back));
             btn_high.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
@@ -351,11 +323,11 @@ public class TempLinkedSetActivity extends BaseActivity {
         if (controlState == 1) {
             btn_open.setTextColor(getResources().getColor(R.color.base_back));
             btn_open.setBackground(getResources().getDrawable(R.drawable.shape_once));
-            btn_close.setTextColor(getResources().getColor(R.color.white));
-            btn_close.setBackgroundColor(0);
+            btn_close.setTextColor(getResources().getColor(R.color.gray2));
+            btn_close.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
         } else if (controlState == 0) {
-            btn_open.setTextColor(getResources().getColor(R.color.white));
-            btn_open.setBackgroundColor(0);
+            btn_open.setTextColor(getResources().getColor(R.color.gray2));
+            btn_open.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
             btn_close.setTextColor(getResources().getColor(R.color.base_back));
             btn_close.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
@@ -390,7 +362,7 @@ public class TempLinkedSetActivity extends BaseActivity {
         public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder viewHolder = null;
             if (convertView == null) {
-                convertView = View.inflate(context, R.layout.item_line2, null);
+                convertView = View.inflate(context, R.layout.item_line, null);
                 viewHolder = new ViewHolder(convertView);
                 convertView.setTag(viewHolder);
             } else {
@@ -407,7 +379,7 @@ public class TempLinkedSetActivity extends BaseActivity {
 
             } else {
                 viewHolder.tv_line.setTextColor(getResources().getColor(R.color.gray2));
-                viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_once));
+                viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
             }
             return convertView;
         }

@@ -2,10 +2,14 @@ package com.peihou.willgood.devicelist;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.Handler;
+import android.os.Message;
 import android.os.PersistableBundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -58,6 +62,7 @@ import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
 import com.baidu.mapapi.utils.DistanceUtil;
 import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
+import com.peihou.willgood.custom.WeakRefHandler;
 import com.peihou.willgood.pojo.Position;
 import com.peihou.willgood.util.BdMapUtils;
 import com.peihou.willgood.util.Utils;
@@ -76,17 +81,21 @@ import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.AppSettingsDialog;
 import pub.devrel.easypermissions.EasyPermissions;
 
-public class LocationActivity extends BaseActivity implements EasyPermissions.PermissionCallbacks{
+public class LocationActivity extends BaseActivity implements EasyPermissions.PermissionCallbacks {
 
-    double discance=0;//轨迹的距离
-    private List<Position> positions=new ArrayList<>();//存储定位的集合
-    int position=0;//定位的几几次位置
+    double discance = 0;//轨迹的距离
+    private List<Position> positions = new ArrayList<>();//存储定位的集合
+    int position = 0;//定位的几几次位置
     @BindView(R.id.map)
     MapView mapView;
-    @BindView(R.id.img_back) ImageView img_back;
+    @BindView(R.id.img_back)
+    ImageView img_back;
+    String deviceMac;
+    String topicName;
+
     @Override
     public void initParms(Bundle parms) {
-
+        deviceMac = parms.getString("deviceMac");
     }
 
     @Override
@@ -96,12 +105,16 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     }
 
     BaiduMap mMap;
+
     @Override
     public void initView(View view) {
         permissionGrantedSuccess();
-        double latitude=30.179158;
-        double longtitude=121.266949;
-
+        double latitude = 30.179158;
+        double longtitude = 121.266949;
+        topicName = "qjjc/gateway/" + deviceMac + "server_to_server";
+        receiver = new MessageReceiver();
+        IntentFilter filter = new IntentFilter("LocationActivity");
+        registerReceiver(receiver, filter);
         //反地理编码，获取经纬度详细地址
         BdMapUtils.reverseGeoParse(longtitude, latitude, new OnGetGeoCoderResultListener() {
             @Override
@@ -114,24 +127,24 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                 if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
                     // 没有检测到结果
 
-                }else{////得到结果后处理方法
-                    String address=result.getAddress();
-                    Log.i("address","-->"+address);
+                } else {////得到结果后处理方法
+                    String address = result.getAddress();
+                    Log.i("address", "-->" + address);
                 }
             }
         });
     }
 
 
-    double latitude=30.179158;
+    double latitude = 30.179158;
     //获取经度信息
-    double longitude=121.266949;
+    double longitude = 121.266949;
 
-    @OnClick({R.id.img_back,R.id.rl_position,R.id.img_position,R.id.img_set})
-    public void onClick(View view){
-        switch (view.getId()){
+    @OnClick({R.id.img_back, R.id.rl_position, R.id.img_position, R.id.img_set})
+    public void onClick(View view) {
+        switch (view.getId()) {
             case R.id.img_back:
-                if (popupWindow!=null && popupWindow.isShowing()){
+                if (popupWindow != null && popupWindow.isShowing()) {
                     popupWindow.dismiss();
                     break;
                 }
@@ -141,23 +154,104 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                 popupWindow();
                 break;
             case R.id.img_position:
-                MapStatusUpdate mapStatusUpdate2=MapStatusUpdateFactory.newLatLng(new LatLng(latitude,longitude));
-                mMap.setMapStatus(mapStatusUpdate2);
+                if (lastLatitude!=0 && lastLongitude!=0) {
+                    LatLng latLng=new LatLng(lastLatitude, lastLongitude);
+                    BitmapDescriptor startBitmap = BitmapDescriptorFactory
+                            .fromResource(R.mipmap.image_location);
+                    //构建MarkerOption，用于在地图上添加Marker
+                    OverlayOptions startOption = new MarkerOptions()
+                            .position(latLng)
+                            .icon(startBitmap);
+                    //在地图上添加Marker，并显示
+                    mMap.addOverlay(startOption);
+
+                    MapStatusUpdate mapStatusUpdate2 = MapStatusUpdateFactory.newLatLng(latLng);
+                    mMap.setMapStatus(mapStatusUpdate2);
+                }
+
                 break;
             case R.id.img_set:
-                startActivity(LocationSetActivity.class);
+                Intent intent=new Intent(this,LocationSetActivity.class);
+                intent.putExtra("deviceMac",deviceMac);
+                startActivity(intent);
 
         }
     }
 
+    Handler.Callback callback = new Handler.Callback() {
+        @Override
+        public boolean handleMessage(Message msg) {
+            if (msg.what == 1001) {
+                String s = (String) msg.obj;
+                String[] ss = s.split("&");
+                String ss1 = ss[0];
+                String ss2 = ss[1];
+                double latitude = Double.parseDouble(ss1);
+                double longitude = Double.parseDouble(ss2);
+                //构建Marker图标
+                LatLng latLng = new LatLng(latitude, longitude);
+                BitmapDescriptor startBitmap = BitmapDescriptorFactory
+                        .fromResource(R.mipmap.image_location);
+                //构建MarkerOption，用于在地图上添加Marker
+                OverlayOptions startOption = new MarkerOptions()
+                        .position(latLng)
+                        .icon(startBitmap);
+                //在地图上添加Marker，并显示
+                mMap.addOverlay(startOption);
+                MapStatusUpdate mapStatusUpdate2 = MapStatusUpdateFactory.newLatLng(latLng);
+                mMap.setMapStatus(mapStatusUpdate2);
+            }
+            return true;
+        }
+    };
+    Handler handler = new WeakRefHandler(callback);
+    MessageReceiver receiver;
+    double lastLatitude;
+    double lastLongitude;
+    class MessageReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String macAddress = intent.getStringExtra("macAddress");
+            try {
+                if (macAddress.equals(deviceMac)) {
+                    double latitude = intent.getDoubleExtra("latitude", 0);
+                    double longitude = intent.getDoubleExtra("longitude", 0);
+                    lastLatitude=latitude;
+                    lastLongitude=longitude;
+                    String s = latitude + "&" + longitude;
+                    Message msg = handler.obtainMessage();
+                    msg.what = 1001;
+                    msg.obj = s;
+                    handler.sendMessage(msg);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static boolean running = false;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        running = true;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        running = false;
+    }
 
     @Override
     protected void onResume() {
         super.onResume();
         mapView.onResume();
-        mMap=mapView.getMap();
+        mMap = mapView.getMap();
         View child = mapView.getChildAt(1);
-        if (child != null && (child instanceof ImageView || child instanceof ZoomControls)){
+        if (child != null && (child instanceof ImageView || child instanceof ZoomControls)) {
             child.setVisibility(View.INVISIBLE);
         }
         mapView.showScaleControl(false);
@@ -183,7 +277,7 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     @Override
     public void onBackPressed() {
 
-        if (popupWindow!=null && popupWindow.isShowing()){
+        if (popupWindow != null && popupWindow.isShowing()) {
             popupWindow.dismiss();
             return;
         }
@@ -196,22 +290,23 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     TextView tv_end;
     TextView tv_distance;
     TextView tv_timer;
-    private void popupWindow(){
-        if (popupWindow!=null && popupWindow.isShowing()){
+
+    private void popupWindow() {
+        if (popupWindow != null && popupWindow.isShowing()) {
             return;
         }
         View view = View.inflate(this, R.layout.popup_trace, null);
-       tv_start=view.findViewById(R.id.tv_start);
-        tv_end=view.findViewById(R.id.tv_end);
-        tv_distance=view.findViewById(R.id.tv_distance);
-        tv_timer=view.findViewById(R.id.tv_timer);
+        tv_start = view.findViewById(R.id.tv_start);
+        tv_end = view.findViewById(R.id.tv_end);
+        tv_distance = view.findViewById(R.id.tv_distance);
+        tv_timer = view.findViewById(R.id.tv_timer);
         popupWindow = new PopupWindow(view, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //点击空白处时，隐藏掉pop窗口
         popupWindow.setFocusable(false);
         popupWindow.setOutsideTouchable(true);
         popupWindow.update();
 
-        popupWindow.showAtLocation(img_back,Gravity.BOTTOM,0,50);
+        popupWindow.showAtLocation(img_back, Gravity.BOTTOM, 0, 50);
         //添加按键事件监听
         backgroundAlpha(0.7f);
 
@@ -221,27 +316,28 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                 backgroundAlpha(1.0f);
             }
         });
-        if (!positions.isEmpty()){
-            Position start=positions.get(0);
-            Position end=positions.get(positions.size()-1);
-            String startAddress=start.getAddress();
-            String endAddress=end.getAddress();
+        if (!positions.isEmpty()) {
+            Position start = positions.get(0);
+            Position end = positions.get(positions.size() - 1);
+            String startAddress = start.getAddress();
+            String endAddress = end.getAddress();
             tv_start.setText(startAddress);
             tv_end.setText(endAddress);
-            tv_distance.setText(discance+"");
-            Date date=new Date();
-            SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm");
-            String timer=format.format(date);
+            tv_distance.setText(discance + "");
+            Date date = new Date();
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+            String timer = format.format(date);
             tv_timer.setText(timer);
         }
     }
 
     //设置蒙版
     private void backgroundAlpha(float f) {
-        WindowManager.LayoutParams lp =getWindow().getAttributes();
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
         lp.alpha = f;
         getWindow().setAttributes(lp);
     }
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -276,10 +372,10 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
 
         } else {
 //             没有申请过权限，现在去申请
-                if (isNeedCheck) {
-                    EasyPermissions.requestPermissions(this, getString(R.string.location),
-                            RC_CAMERA_AND_LOCATION, perms);
-                }
+            if (isNeedCheck) {
+                EasyPermissions.requestPermissions(this, getString(R.string.location),
+                        RC_CAMERA_AND_LOCATION, perms);
+            }
 
         }
     }
@@ -316,7 +412,6 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     }
 
 
-
     LocationClient bLocationClient;
 
     /**
@@ -324,11 +419,12 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
      */
 
     MyLocationListener myLocationListener;
+
     private void initLocationOption() {
 //定位服务的客户端。宿主程序在客户端声明此类，并调用，目前只支持在主线程中启动
 
 //声明LocationClient类实例并配置定位参数
-         bLocationClient= new LocationClient(getApplicationContext());
+        bLocationClient = new LocationClient(getApplicationContext());
         LocationClientOption locationOption = new LocationClientOption();
         myLocationListener = new MyLocationListener();
 //注册监听函数
@@ -362,7 +458,7 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
 //设置打开自动回调位置模式，该开关打开后，期间只要定位SDK检测到位置变化就会主动回调给开发者，该模式下开发者无需再关心定位间隔是多少，定位SDK本身发现位置变化就会及时回调给开发者
         locationOption.setOpenAutoNotifyMode();
 //设置打开自动回调位置模式，该开关打开后，期间只要定位SDK检测到位置变化就会主动回调给开发者
-        locationOption.setOpenAutoNotifyMode(3000,1, LocationClientOption.LOC_SENSITIVITY_HIGHT);
+        locationOption.setOpenAutoNotifyMode(3000, 1, LocationClientOption.LOC_SENSITIVITY_HIGHT);
 
         bLocationClient.setLocOption(locationOption);
 
@@ -372,24 +468,25 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     /**
      * 开始定位
      */
-    private void startBaiduLocation(){
+    private void startBaiduLocation() {
         bLocationClient.start();
     }
 
     /**
      * 结束定位
      */
-    private void stopBaiduLocation(){
+    private void stopBaiduLocation() {
         bLocationClient.stop();
     }
 
     String address;
+
     /**
      * 实现定位回调
      */
     public class MyLocationListener extends BDAbstractLocationListener {
         @Override
-        public void onReceiveLocation(BDLocation location){
+        public void onReceiveLocation(BDLocation location) {
             //此处的BDLocation为定位结果信息类，通过它的各种get方法可获取定位相关的全部结果
             //以下只列举部分获取经纬度相关（常用）的结果信息
             //更多结果信息获取说明，请参照类参考中BDLocation类中的说明
@@ -402,12 +499,12 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
 
             //获取定位类型、定位错误返回码，具体信息可参照类参考中BDLocation类中的说明
             int errorCode = location.getLocType();
-            Log.i("MyLocationListenerType","-->"+errorCode);
-            if (errorCode==161){
+            Log.i("MyLocationListenerType", "-->" + errorCode);
+            if (errorCode == 161) {
                 //获取纬度信息
-               latitude = location.getLatitude();
+                latitude = location.getLatitude();
                 //获取经度信息
-               longitude = location.getLongitude();
+                longitude = location.getLongitude();
 
                 BdMapUtils.reverseGeoParse(longitude, latitude, new OnGetGeoCoderResultListener() {
                     @Override
@@ -420,34 +517,34 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
                             // 没有检测到结果
 
-                        }else{////得到结果后处理方法
-                            address=result.getAddress();
-                            Log.i("addressaaaaaaaa","-->"+address);
-                            LatLng latLng=new LatLng(latitude,longitude);
-                            Position position2=new Position(position,address,latLng);
+                        } else {////得到结果后处理方法
+                            address = result.getAddress();
+                            Log.i("addressaaaaaaaa", "-->" + address);
+                            LatLng latLng = new LatLng(latitude, longitude);
+                            Position position2 = new Position(position, address, latLng);
                             positions.add(position2);
 
 
                             Collections.sort(positions, new Comparator<Position>() {
                                 @Override
                                 public int compare(Position o1, Position o2) {
-                                    if (o1.getPosition()>o2.getPosition()){
+                                    if (o1.getPosition() > o2.getPosition()) {
                                         return 1;
-                                    }else if (o1.getPosition()<o2.getPosition()){
+                                    } else if (o1.getPosition() < o2.getPosition()) {
                                         return -1;
                                     }
                                     return 0;
                                 }
                             });
-                            discance=0;
+                            discance = 0;
                             for (int i = 0; i < positions.size(); i++) {
-                                Position position=positions.get(i);
-                                LatLng p1=position.getLatLng();
-                                LatLng p2=position.getLatLng();
-                                discance+=DistanceUtil.getDistance(p1, p2);
+                                Position position = positions.get(i);
+                                LatLng p1 = position.getLatLng();
+                                LatLng p2 = position.getLatLng();
+                                discance += DistanceUtil.getDistance(p1, p2);
                                 posints.add(positions.get(i).getLatLng());
                             }
-                            if (posints.size()>3){
+                            if (posints.size() > 3) {
                                 //设置折线的属性
                                 OverlayOptions mOverlayOptions = new PolylineOptions()
                                         .width(10)
@@ -457,20 +554,20 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                             }
 
 
-                            MapStatusUpdate mapStatusUpdate2=MapStatusUpdateFactory.newLatLng(new LatLng(latitude,longitude));
+                            MapStatusUpdate mapStatusUpdate2 = MapStatusUpdateFactory.newLatLng(new LatLng(latitude, longitude));
                             mMap.setMapStatus(mapStatusUpdate2);
-                            if (popupWindow!=null && popupWindow.isShowing()){
-                                if (!positions.isEmpty()){
-                                    Position start=positions.get(0);
-                                    Position end=positions.get(positions.size()-1);
-                                    String startAddress=start.getAddress();
-                                    String endAddress=end.getAddress();
+                            if (popupWindow != null && popupWindow.isShowing()) {
+                                if (!positions.isEmpty()) {
+                                    Position start = positions.get(0);
+                                    Position end = positions.get(positions.size() - 1);
+                                    String startAddress = start.getAddress();
+                                    String endAddress = end.getAddress();
                                     tv_start.setText(startAddress);
                                     tv_end.setText(endAddress);
-                                    tv_distance.setText(discance+"");
-                                    Date date=new Date();
-                                    SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm");
-                                    String timer=format.format(date);
+                                    tv_distance.setText(discance + "");
+                                    Date date = new Date();
+                                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+                                    String timer = format.format(date);
                                     tv_timer.setText(timer);
                                 }
                             }
@@ -481,8 +578,10 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
             }
         }
     }
+
     private AMapLocationClient locationClient = null;
     private AMapLocationClientOption locationOption = null;
+
     /**
      * 初始化定位
      *
@@ -510,7 +609,7 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
         mOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Hight_Accuracy);//可选，设置定位模式，可选的模式有高精度、仅设备、仅网络。默认为高精度模式
         mOption.setGpsFirst(false);//可选，设置是否gps优先，只在高精度模式下有效。默认关闭
         mOption.setHttpTimeOut(30000);//可选，设置网络请求超时时间。默认为30秒。在仅设备模式下无效
-        mOption.setInterval(1000*30);//可选，设置定位间隔。默认为2秒
+        mOption.setInterval(1000 * 30);//可选，设置定位间隔。默认为2秒
         mOption.setNeedAddress(true);//可选，设置是否返回逆地理地址信息。默认是true
         mOption.setOnceLocation(false);//可选，设置是否单次定位。默认是false
         mOption.setOnceLocationLatest(false);//可选，设置是否等待wifi刷新，默认为false.如果设置为true,会自动变为单次定位，持续定位时不要使用
@@ -525,7 +624,7 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
      * 定位监听
      */
 
-    List<com.baidu.mapapi.model.LatLng> posints=new ArrayList<>();
+    List<com.baidu.mapapi.model.LatLng> posints = new ArrayList<>();
     AMapLocationListener locationListener = new AMapLocationListener() {
         @Override
         public void onLocationChanged(AMapLocation location) {
@@ -535,7 +634,7 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                 //errCode等于0代表定位成功，其他的为定位失败，具体的可以参照官网定位错误码说明
                 if (location.getErrorCode() == 0) {
                     sb.append("定位成功" + "\n");
-                    Log.i("latLng","("+location.getLatitude()+","+location.getLongitude()+")");
+                    Log.i("latLng", "(" + location.getLatitude() + "," + location.getLongitude() + ")");
                     sb.append("定位类型: " + location.getLocationType() + "\n");
                     sb.append("经    度    : " + location.getLongitude() + "\n");
                     sb.append("纬    度    : " + location.getLatitude() + "\n");
@@ -556,7 +655,7 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                     sb.append("地    址    : " + location.getAddress() + "\n");
                     sb.append("兴趣点    : " + location.getPoiName() + "\n");
                     //定位完成的时间
-                    sb.append("定位时间: " +Utils.formatUTC(location.getTime(), "yyyy-MM-dd HH:mm:ss") + "\n");
+                    sb.append("定位时间: " + Utils.formatUTC(location.getTime(), "yyyy-MM-dd HH:mm:ss") + "\n");
                 } else {
                     //定位失败
                     sb.append("定位失败" + "\n");
@@ -575,64 +674,31 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                 String result = sb.toString();
                 Log.i("reSult", "-->" + result);
                 if ("定位失败".equals(result)) {
-                    Log.i("mmmm","-->"+"定位失败");
-                }else {
-                    String address=location.getAddress();
-                    double latitude=location.getLatitude();
-                    double longtitude=location.getLongitude();
-                    com.baidu.mapapi.model.LatLng latLng=new com.baidu.mapapi.model.LatLng(latitude,longtitude);
-                    Position position2=new Position(position,address,latLng);
+                    Log.i("mmmm", "-->" + "定位失败");
+                } else {
+                    String address = location.getAddress();
+                    double latitude = location.getLatitude();
+                    double longtitude = location.getLongitude();
+                    com.baidu.mapapi.model.LatLng latLng = new com.baidu.mapapi.model.LatLng(latitude, longtitude);
+                    Position position2 = new Position(position, address, latLng);
                     positions.add(position2);
                     Collections.sort(positions, new Comparator<Position>() {
                         @Override
                         public int compare(Position o1, Position o2) {
-                            if (o1.getPosition()>o2.getPosition()){
+                            if (o1.getPosition() > o2.getPosition()) {
                                 return 1;
-                            }else if (o1.getPosition()<o2.getPosition()){
+                            } else if (o1.getPosition() < o2.getPosition()) {
                                 return -1;
                             }
                             return 0;
                         }
                     });
-                   posints.clear();
-                   discance=0;
-                    for (int i = 0; i < positions.size(); i++) {
-                        Position position=positions.get(i);
-                        LatLng p1=position.getLatLng();
-                        LatLng p2=position.getLatLng();
-                        discance+=DistanceUtil.getDistance(p1, p2);
-                        posints.add(positions.get(i).getLatLng());
-                    }
-
-                    if (positions.size()>2){
-                        //设置折线的属性
-                        OverlayOptions mOverlayOptions = new PolylineOptions()
-                                .width(10)
-                                .color(0xAAFF0000)
-                                .points(posints);
-
-                        Overlay mPolyline = mMap.addOverlay(mOverlayOptions);
-                    }
 
 
-                    MapStatusUpdate mapStatusUpdate2=MapStatusUpdateFactory.newLatLng(new LatLng(latitude,longtitude));
+
+                    MapStatusUpdate mapStatusUpdate2 = MapStatusUpdateFactory.newLatLng(new LatLng(latitude, longtitude));
                     mMap.setMapStatus(mapStatusUpdate2);
-                    if (popupWindow!=null && popupWindow.isShowing()){
-                        if (!positions.isEmpty()){
-                            Position start=positions.get(0);
-                            Position end=positions.get(positions.size()-1);
-                            String startAddress=start.getAddress();
-                            String endAddress=end.getAddress();
-                            tv_start.setText(startAddress);
-                            tv_end.setText(endAddress);
-                            tv_distance.setText(discance+"");
-                            Date date=new Date();
-                            SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm");
-                            String timer=format.format(date);
-                            tv_timer.setText(timer);
-                        }
-                    }
-                    position++;
+                    stopLocation();
                 }
             }
         }

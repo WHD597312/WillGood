@@ -57,4 +57,5 @@
     <color name="possible_result_points">#c0ffff00</color>
     <color name="base_back">#09c585</color>
     <color name="gray2">#575757</color>
+    <color name="gray3">#cfd0cf</color>
 </resources>

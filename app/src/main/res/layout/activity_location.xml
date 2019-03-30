@@ -72,6 +72,7 @@
         android:layout_centerHorizontal="true"
         android:gravity="center"
         android:layout_marginBottom="@dimen/dp_35"
+        android:visibility="gone"
         >
         <ImageView
             android:id="@+id/img_trace"
@@ -82,6 +83,7 @@
             android:layout_marginLeft="@dimen/dp_20"
             android:layout_marginTop="@dimen/dp_10"
             android:layout_marginBottom="@dimen/dp_10"
+            android:visibility="gone"
             />
         <TextView
             android:id="@+id/tv_trance"

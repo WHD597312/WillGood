@@ -1,6 +1,7 @@
 package com.peihou.willgood.devicelist;
 
 import android.content.Context;
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -21,7 +22,7 @@ public class PowerLostMomoryActivity extends BaseActivity {
     ImageView img_open;
     @Override
     public void initParms(Bundle parms) {
-
+        open=parms.getInt("open");
     }
 
     @Override
@@ -32,13 +33,20 @@ public class PowerLostMomoryActivity extends BaseActivity {
 
     @Override
     public void initView(View view) {
-
+        if (open==1){
+            img_open.setImageResource(R.mipmap.img_open);
+        }else {
+            img_open.setImageResource(R.mipmap.img_close);
+        }
     }
-    int open=1;//1为打开掉电记忆，0为关闭掉电记忆
+    int open=-1;//1为打开掉电记忆，0为关闭掉电记忆
     @OnClick({R.id.img_back,R.id.img_open})
     public void onClick(View v){
         switch (v.getId()){
             case R.id.img_back:
+                Intent intent=new Intent();
+                intent.putExtra("open",open);
+                setResult(1000,intent);
                 finish();
                 break;
             case R.id.img_open:
@@ -56,5 +64,13 @@ public class PowerLostMomoryActivity extends BaseActivity {
     @Override
     public void doBusiness(Context mContext) {
 
+    }
+
+    @Override
+    public void onBackPressed() {
+        Intent intent=new Intent();
+        intent.putExtra("open",open);
+        setResult(1000,intent);
+        finish();
     }
 }

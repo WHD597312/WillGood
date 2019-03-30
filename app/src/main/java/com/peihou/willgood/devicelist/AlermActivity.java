@@ -96,6 +96,7 @@ public class AlermActivity extends BaseActivity {
         userId = preferences.getInt("userId", 0);
         deviceAlermDao = new DeviceAlermDaoImpl(getApplicationContext());
         list_alerm.setLayoutManager(new LinearLayoutManager(this));
+
         list = deviceAlermDao.findDeviceAlerms(deviceMac);
         if (list.size()!=8){
             deviceAlermDao.deleteDeviceAlerms(deviceMac);
@@ -205,7 +206,8 @@ public class AlermActivity extends BaseActivity {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        if (popupWindow2==null)
+            popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
         popupWindow2.setFocusable(false);
@@ -364,6 +366,7 @@ public class AlermActivity extends BaseActivity {
             MQService.LocalBinder binder = (MQService.LocalBinder) service;
             mqService = binder.getService();
             mqService.getData(topicName, 0x66);
+            countTimer.start();
         }
 
         @Override

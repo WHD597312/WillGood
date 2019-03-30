@@ -99,6 +99,13 @@ public class TimerTaskActivity extends BaseActivity {
     public void onClick(View view){
         switch (view.getId()){
             case R.id.img_back:
+                if (mqService!=null){
+                    if (!timerTasks.isEmpty()){
+                        List<TimerTask> timerTasks2=updateTimerTasks(timerTasks);
+                        mqService.updateTimerTasks(timerTasks2);
+                    }
+                }
+
                 finish();
                 break;
             case R.id.img_add:
@@ -122,6 +129,26 @@ public class TimerTaskActivity extends BaseActivity {
         running=false;
     }
 
+    @Override
+    public void onBackPressed() {
+        if (mqService!=null){
+            if (!timerTasks.isEmpty()){
+                List<TimerTask> timerTasks2=updateTimerTasks(timerTasks);
+                mqService.updateTimerTasks(timerTasks2);
+            }
+        }
+
+        super.onBackPressed();
+    }
+
+    private List<TimerTask> updateTimerTasks(List<TimerTask> timerTasks){
+        for (int i = 0; i < timerTasks.size(); i++) {
+            TimerTask timerTask=timerTasks.get(i);
+            timerTask.setVisitity(0);
+            timerTasks.set(i,timerTask);
+        }
+        return timerTasks;
+    }
 
     //自定义点动时间
     ChangeDialog dialog;
@@ -201,11 +228,11 @@ public class TimerTaskActivity extends BaseActivity {
                             if (returnData==1){
                                 if (mqService!=null){
                                     returnData=0;
-                                    if (operate==1){
-                                        mqService.starSpeech(deviceMac,"删除成功");
-                                    }else {
-                                        mqService.starSpeech(deviceMac,"设置成功");
-                                    }
+//                                    if (operate==1){
+//                                        mqService.starSpeech(deviceMac,"删除成功");
+//                                    }else {
+//                                        mqService.starSpeech(deviceMac,"设置成功");
+//                                    }
                                 }
                             }
 
@@ -229,6 +256,7 @@ public class TimerTaskActivity extends BaseActivity {
             mqService=binder.getService();
             if (mqService!=null) {
                 mqService.getData(topicName,0x22);
+                countTimer.start();
             }
         }
 
@@ -422,7 +450,8 @@ public class TimerTaskActivity extends BaseActivity {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load=view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        if (popupWindow2==null)
+            popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
         popupWindow2.setFocusable(false);

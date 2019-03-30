@@ -80,7 +80,7 @@
         android:layout_marginLeft="@dimen/dp_10"
         android:layout_marginRight="@dimen/dp_10"
         >
-        <com.peihou.willgood2.custom.CustomDatePicker
+        <com.peihou.willgood.custom.CustomDatePicker
             android:id="@+id/datePicker"
             android:layout_width="0dp"
             android:layout_weight="3"

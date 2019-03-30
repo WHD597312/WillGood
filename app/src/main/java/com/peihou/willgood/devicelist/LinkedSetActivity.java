@@ -8,6 +8,7 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,8 +22,12 @@ import com.jaygoo.widget.OnRangeChangedListener;
 import com.jaygoo.widget.RangeSeekBar;
 import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
+import com.peihou.willgood.database.dao.impl.DeviceLineDaoImpl;
 import com.peihou.willgood.pojo.Line;
+import com.peihou.willgood.pojo.Line2;
 import com.peihou.willgood.pojo.Link;
+import com.peihou.willgood.pojo.Linked;
+import com.peihou.willgood.util.TenTwoUtil;
 import com.peihou.willgood.util.ToastUtil;
 
 import java.util.ArrayList;
@@ -46,7 +51,7 @@ public class LinkedSetActivity extends BaseActivity {
 
 
     @BindView(R.id.gv_line) GridView gv_line;//线路网格布局
-    private List<Line> lines=new ArrayList<>();//线路集合
+    private List<Line2> lines=new ArrayList<>();//线路集合
     @BindView(R.id.slide_bar) RangeSeekBar slide_bar;
     @BindView(R.id.btn_once) TextView btn_once;//单次触发
     @BindView(R.id.btn_loop) TextView btn_loop;//循环触发
@@ -54,12 +59,15 @@ public class LinkedSetActivity extends BaseActivity {
     @BindView(R.id.btn_high) TextView btn_high;//高于按钮
     @BindView(R.id.btn_open) TextView btn_open;//控制状态开
     @BindView(R.id.btn_close) TextView btn_close;//控制状态关
+    private DeviceLineDaoImpl deviceLineDao;
     LinesAdapter adapter;
     int type=0;
     int value=0;
+    String deviceMac;
     @Override
     public void initParms(Bundle parms) {
         type=parms.getInt("type");
+        deviceMac=parms.getString("deviceMac");
     }
 
     @Override
@@ -81,21 +89,15 @@ public class LinkedSetActivity extends BaseActivity {
             s="电压";
         }
 
-        lines.add(new Line(true,"线路1"));
-        lines.add(new Line(false,"线路2"));
-        lines.add(new Line(false,"线路3"));
-        lines.add(new Line(false,"线路4"));
-        lines.add(new Line(false,"线路5"));
-        lines.add(new Line(false,"线路6"));
-        lines.add(new Line(false,"线路7"));
-        lines.add(new Line(false,"线路8"));
 
+        deviceLineDao=new DeviceLineDaoImpl(getApplicationContext());
+        lines=deviceLineDao.findDeviceOnlineLines(deviceMac);
         adapter=new LinesAdapter(this,lines);
         gv_line.setAdapter(adapter);
         gv_line.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Line line=lines.get(position);
+                Line2 line=lines.get(position);
                 if (line.isOnClick()){
                     line.setOnClick(false);
                 }else {
@@ -134,7 +136,8 @@ public class LinkedSetActivity extends BaseActivity {
     public void doBusiness(Context mContext) {
 
     }
-
+    int[] pre = new int[8];
+    int[] last = new int[8];
     @OnClick({R.id.img_back,R.id.btn_low,R.id.btn_high,R.id.btn_once,R.id.btn_loop,R.id.img_ensure,R.id.btn_open,R.id.btn_close})
     public void onClick(View view){
         switch (view.getId()){
@@ -142,12 +145,38 @@ public class LinkedSetActivity extends BaseActivity {
                 finish();
                 break;
             case R.id.img_ensure:
-                Intent intent=new Intent();
-                intent.putExtra("value",value);
-                intent.putExtra("condition",condition);
-                intent.putExtra("controlState",controlState);
-                intent.putIntegerArrayListExtra("lines",linesList);
-                setResult(1000,intent);
+
+
+                for (int i = 0; i < lines.size(); i++) {
+                    Line2 line2 = lines.get(i);
+                    int deviceLineNum = line2.getDeviceLineNum() - 1;
+                    String name = line2.getName();
+                    if (deviceLineNum < 8) {
+                        if (line2.isOnClick()) {
+                            pre[7 - deviceLineNum] = 1;
+                        } else {
+                            pre[7 - deviceLineNum] = 0;
+                        }
+                    } else if (deviceLineNum >= 8) {
+                        if (line2.isOnClick()) {
+                            last[7 - (deviceLineNum - 8)] = 1;
+                        } else {
+                            last[7 - (deviceLineNum - 8)] = 0;
+                        }
+                    }
+                }
+               int  preLines = TenTwoUtil.changeToTen(pre);
+               int  lastLines = TenTwoUtil.changeToTen(last);
+                if (preLines+lastLines == 0) {
+                    ToastUtil.showShort(this, "请选择线路");
+                    break;
+                }
+                touch=touch==1?0:1;
+
+                Linked linked = new Linked(deviceMac, type, "", value, condition, controlState, 1, preLines, lastLines, touch);
+                Intent intent = new Intent();
+                intent.putExtra("linked", linked);
+                setResult(1000, intent);
                 finish();
                 break;
             case R.id.btn_low:
@@ -165,17 +194,17 @@ public class LinkedSetActivity extends BaseActivity {
                 setCaseLimit();
                 break;
             case R.id.btn_open:
-                if (controlState==0){
-                    break;
-                }
-                controlState=0;
-                setControlState();
-                break;
-            case R.id.btn_close:
                 if (controlState==1){
                     break;
                 }
                 controlState=1;
+                setControlState();
+                break;
+            case R.id.btn_close:
+                if (controlState==0){
+                    break;
+                }
+                controlState=0;
                 setControlState();
                 break;
             case R.id.btn_once:
@@ -196,44 +225,44 @@ public class LinkedSetActivity extends BaseActivity {
     }
 
     int touch=0;//为0是单次触发，1为多次触发
-    private void setTouchMode(){
-        if (touch==0){
-            btn_once.setTextColor(Color.parseColor("#ffffff"));
-            btn_once.setBackground(getResources().getDrawable(R.drawable.shape_once));
-            btn_loop.setTextColor(Color.parseColor("#939393"));
-            btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_loop));
-        }else if (touch==1){
-            btn_once.setTextColor(Color.parseColor("#939393"));
+    private void setTouchMode() {
+        if (touch == 0) {
+            btn_once.setTextColor(getResources().getColor(R.color.base_back));
             btn_once.setBackground(getResources().getDrawable(R.drawable.shape_loop));
-            btn_loop.setTextColor(Color.parseColor("#ffffff"));
+            btn_loop.setTextColor(getResources().getColor(R.color.gray2));
+            btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
+        } else if (touch == 1) {
+            btn_once.setTextColor(getResources().getColor(R.color.gray2));
+            btn_once.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
+            btn_loop.setTextColor(getResources().getColor(R.color.base_back));
             btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
     }
     int condition=0;//条件 0为低于 1为高于
-    private void setCaseLimit(){
-        if (condition==0){
-            btn_low.setTextColor(Color.parseColor("#ffffff"));
+    private void setCaseLimit() {
+        if (condition == 0) {
+            btn_low.setTextColor(getResources().getColor(R.color.base_back));
             btn_low.setBackground(getResources().getDrawable(R.drawable.shape_once));
-            btn_high.setTextColor(Color.parseColor("#939393"));
-            btn_high.setBackground(getResources().getDrawable(R.drawable.shape_loop));
-        }else if (condition==1){
-            btn_low.setTextColor(Color.parseColor("#939393"));
-            btn_low.setBackground(getResources().getDrawable(R.drawable.shape_loop));
-            btn_high.setTextColor(Color.parseColor("#ffffff"));
+            btn_high.setTextColor(getResources().getColor(R.color.gray2));
+            btn_high.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
+        } else if (condition == 1) {
+            btn_low.setTextColor(getResources().getColor(R.color.gray2));
+            btn_low.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
+            btn_high.setTextColor(getResources().getColor(R.color.base_back));
             btn_high.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
     }
-    int controlState=0;
-    private void setControlState(){
-        if (controlState==0){
-            btn_open.setTextColor(Color.parseColor("#ffffff"));
+    int controlState=1;
+    private void setControlState() {
+        if (controlState == 1) {
+            btn_open.setTextColor(getResources().getColor(R.color.base_back));
             btn_open.setBackground(getResources().getDrawable(R.drawable.shape_once));
-            btn_close.setTextColor(Color.parseColor("#939393"));
-            btn_close.setBackground(getResources().getDrawable(R.drawable.shape_loop));
-        }else if (controlState==1){
-            btn_open.setTextColor(Color.parseColor("#939393"));
-            btn_open.setBackground(getResources().getDrawable(R.drawable.shape_loop));
-            btn_close.setTextColor(Color.parseColor("#ffffff"));
+            btn_close.setTextColor(getResources().getColor(R.color.gray2));
+            btn_close.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
+        } else if (controlState == 0) {
+            btn_open.setTextColor(getResources().getColor(R.color.gray2));
+            btn_open.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
+            btn_close.setTextColor(getResources().getColor(R.color.base_back));
             btn_close.setBackground(getResources().getDrawable(R.drawable.shape_once));
         }
     }
@@ -241,9 +270,9 @@ public class LinkedSetActivity extends BaseActivity {
     class LinesAdapter extends BaseAdapter{
 
         private Context context;
-        private List<Line> list;
+        private List<Line2> list;
 
-        public LinesAdapter(Context context, List<Line> list) {
+        public LinesAdapter(Context context, List<Line2> list) {
             this.context = context;
             this.list = list;
         }
@@ -254,7 +283,7 @@ public class LinkedSetActivity extends BaseActivity {
         }
 
         @Override
-        public Line getItem(int position) {
+        public Line2 getItem(int position) {
             return list.get(position);
         }
 
@@ -267,26 +296,26 @@ public class LinkedSetActivity extends BaseActivity {
         public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder viewHolder=null;
             if (convertView==null){
-                convertView=View.inflate(context,R.layout.item_line2,null);
+                convertView=View.inflate(context,R.layout.item_line,null);
                 viewHolder=new ViewHolder(convertView);
                 convertView.setTag(viewHolder);
             }else {
                 viewHolder= (ViewHolder) convertView.getTag();
             }
-            Line line=getItem(position);
+            Line2 line=getItem(position);
             boolean onClick=line.isOnClick();
             String name=line.getName();
             viewHolder.tv_line.setText(name+"");
 
             if (onClick){
-                viewHolder.tv_line.setTextColor(Color.parseColor("#ffffff"));
+                viewHolder.tv_line.setTextColor(getResources().getColor(R.color.base_back));
                 viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_once));
                 if (!linesList.contains(position)){
                     linesList.add(position);
                 }
             }else {
-                viewHolder.tv_line.setTextColor(Color.parseColor("#939393"));
-                viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_loop));
+                viewHolder.tv_line.setTextColor(getResources().getColor(R.color.gray2));
+                viewHolder.tv_line.setBackground(getResources().getDrawable(R.drawable.shape_gray3));
                 if (linesList.contains(position)){
                     linesList.remove(position);
                 }

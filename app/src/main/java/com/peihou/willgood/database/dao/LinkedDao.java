@@ -39,6 +39,7 @@ public class LinkedDao extends AbstractDao<Linked, Long> {
         public final static Property State = new Property(12, int.class, "state", false, "STATE");
         public final static Property Analog = new Property(13, int.class, "analog", false, "ANALOG");
         public final static Property SwitchLine = new Property(14, int.class, "switchLine", false, "SWITCH_LINE");
+        public final static Property Visitity = new Property(15, int.class, "visitity", false, "VISITITY");
     }
 
 
@@ -68,7 +69,8 @@ public class LinkedDao extends AbstractDao<Linked, Long> {
                 "\"TRI_TYPE\" INTEGER NOT NULL ," + // 11: triType
                 "\"STATE\" INTEGER NOT NULL ," + // 12: state
                 "\"ANALOG\" INTEGER NOT NULL ," + // 13: analog
-                "\"SWITCH_LINE\" INTEGER NOT NULL );"); // 14: switchLine
+                "\"SWITCH_LINE\" INTEGER NOT NULL ," + // 14: switchLine
+                "\"VISITITY\" INTEGER NOT NULL );"); // 15: visitity
     }
 
     /** Drops the underlying database table. */
@@ -111,6 +113,7 @@ public class LinkedDao extends AbstractDao<Linked, Long> {
         stmt.bindLong(13, entity.getState());
         stmt.bindLong(14, entity.getAnalog());
         stmt.bindLong(15, entity.getSwitchLine());
+        stmt.bindLong(16, entity.getVisitity());
     }
 
     @Override
@@ -147,6 +150,7 @@ public class LinkedDao extends AbstractDao<Linked, Long> {
         stmt.bindLong(13, entity.getState());
         stmt.bindLong(14, entity.getAnalog());
         stmt.bindLong(15, entity.getSwitchLine());
+        stmt.bindLong(16, entity.getVisitity());
     }
 
     @Override
@@ -171,7 +175,8 @@ public class LinkedDao extends AbstractDao<Linked, Long> {
             cursor.getInt(offset + 11), // triType
             cursor.getInt(offset + 12), // state
             cursor.getInt(offset + 13), // analog
-            cursor.getInt(offset + 14) // switchLine
+            cursor.getInt(offset + 14), // switchLine
+            cursor.getInt(offset + 15) // visitity
         );
         return entity;
     }
@@ -193,6 +198,7 @@ public class LinkedDao extends AbstractDao<Linked, Long> {
         entity.setState(cursor.getInt(offset + 12));
         entity.setAnalog(cursor.getInt(offset + 13));
         entity.setSwitchLine(cursor.getInt(offset + 14));
+        entity.setVisitity(cursor.getInt(offset + 15));
      }
     
     @Override

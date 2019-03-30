@@ -28,13 +28,12 @@ public class Line2 {
     private String interLock;//两个线路的所有 格式为deviceLineNum1&deviceLineNum2
 
 
-    public Line2(boolean onClick, String name, int seconds, boolean open, int deviceLineNum, long deviceId, String deviceMac) {
+    public Line2(boolean onClick, String name, int seconds, boolean open, int deviceLineNum,String deviceMac) {
         this.onClick = onClick;
         this.name = name;
         this.seconds = seconds;
         this.open = open;
         this.deviceLineNum = deviceLineNum;
-        this.deviceId = deviceId;
         this.deviceMac=deviceMac;
     }
 

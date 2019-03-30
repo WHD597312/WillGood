@@ -28,6 +28,8 @@ public class Linked implements Serializable {
     private int state;//联动的状态 0关闭，1打开，2删除
     private int analog;//模拟量 0,1,2,3,4,5,6,7 0-3为电流1-4,   4-7为电压1-4
     private int switchLine;//开关量线路
+    private int visitity;//显示数据 0不显示，1，显示
+
     @Transient
     private boolean open;
 
@@ -106,9 +108,9 @@ public class Linked implements Serializable {
 
 
 
-    @Generated(hash = 1312923550)
+    @Generated(hash = 1928273482)
     public Linked(Long id, String deviceMac, int mcuVersion, int type, String lines, String name, int condition, int triState, int conditionState, int preLines,
-                  int lastLines, int triType, int state, int analog, int switchLine) {
+            int lastLines, int triType, int state, int analog, int switchLine, int visitity) {
         this.id = id;
         this.deviceMac = deviceMac;
         this.mcuVersion = mcuVersion;
@@ -124,6 +126,7 @@ public class Linked implements Serializable {
         this.state = state;
         this.analog = analog;
         this.switchLine = switchLine;
+        this.visitity = visitity;
     }
 
     public int getType() {
@@ -268,6 +271,14 @@ public class Linked implements Serializable {
 
     public void setSwitchLine(int switchLine) {
         this.switchLine = switchLine;
+    }
+
+    public int getVisitity() {
+        return this.visitity;
+    }
+
+    public void setVisitity(int visitity) {
+        this.visitity = visitity;
     }
 
 

@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/base_back"
     tools:context=".devicelist.DeviceListActivity">
     <!--<View-->
     <!--android:id="@+id/view_main"-->
@@ -43,7 +44,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/rl_head"
-        android:background="#f7f7f7"
+        android:background="@color/base_back"
         >
         <RelativeLayout
             android:layout_marginTop="@dimen/dp_25"
