@@ -3,12 +3,16 @@ package com.peihou.willgood.devicelist;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.os.CountDownTimer;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Message;
 import android.os.PersistableBundle;
 import android.support.annotation.NonNull;
@@ -64,7 +68,9 @@ import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.custom.WeakRefHandler;
 import com.peihou.willgood.pojo.Position;
+import com.peihou.willgood.service.MQService;
 import com.peihou.willgood.util.BdMapUtils;
+import com.peihou.willgood.util.ToastUtil;
 import com.peihou.willgood.util.Utils;
 
 import java.text.SimpleDateFormat;
@@ -106,6 +112,7 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
 
     BaiduMap mMap;
 
+    boolean bind;
     @Override
     public void initView(View view) {
         permissionGrantedSuccess();
@@ -115,6 +122,8 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
         receiver = new MessageReceiver();
         IntentFilter filter = new IntentFilter("LocationActivity");
         registerReceiver(receiver, filter);
+        Intent service=new Intent(this,MQService.class);
+        bind=bindService(service,connection,Context.BIND_AUTO_CREATE);
         //反地理编码，获取经纬度详细地址
         BdMapUtils.reverseGeoParse(longtitude, latitude, new OnGetGeoCoderResultListener() {
             @Override
@@ -154,6 +163,14 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                 popupWindow();
                 break;
             case R.id.img_position:
+                if (popupWindow2!=null && popupWindow2.isShowing()){
+                    ToastUtil.showShort(this,"请稍后");
+                    break;
+                }
+                if (mqService!=null){
+                    mqService.getData(topicName,0x77);
+                    countTimer.start();
+                }
                 if (lastLatitude!=0 && lastLongitude!=0) {
                     LatLng latLng=new LatLng(lastLatitude, lastLongitude);
                     BitmapDescriptor startBitmap = BitmapDescriptorFactory
@@ -175,6 +192,61 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
                 intent.putExtra("deviceMac",deviceMac);
                 startActivity(intent);
 
+        }
+    }
+    private PopupWindow popupWindow2;
+    public void popupmenuWindow3() {
+        if (popupWindow2 != null && popupWindow2.isShowing()) {
+            return;
+        }
+        View view = View.inflate(this, R.layout.progress, null);
+        TextView tv_load = view.findViewById(R.id.tv_load);
+        tv_load.setTextColor(getResources().getColor(R.color.white));
+        if (popupWindow2==null){
+            popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        }
+        //添加弹出、弹入的动画
+        popupWindow2.setAnimationStyle(R.style.Popupwindow);
+        popupWindow2.setFocusable(false);
+        popupWindow2.setOutsideTouchable(false);
+        backgroundAlpha(0.6f);
+        popupWindow2.setOnDismissListener(new PopupWindow.OnDismissListener() {
+            @Override
+            public void onDismiss() {
+                backgroundAlpha(1.0f);
+            }
+        });
+//        ColorDrawable dw = new ColorDrawable(0x30000000);
+//        popupWindow.setBackgroundDrawable(dw);
+//        popupWindow2.showAsDropDown(et_wifi, 0, -20);
+        popupWindow2.showAtLocation(img_back, Gravity.CENTER, 0, 0);
+        //添加按键事件监听
+    }
+
+    CountTimer countTimer = new CountTimer(2000, 1000);
+    class CountTimer extends CountDownTimer {
+
+        /**
+         * @param millisInFuture    The number of millis in the future from the call
+         *                          to {@link #start()} until the countdown is done and {@link #onFinish()}
+         *                          is called.
+         * @param countDownInterval The interval along the way to receive
+         *                          {@link #onTick(long)} callbacks.
+         */
+        public CountTimer(long millisInFuture, long countDownInterval) {
+            super(millisInFuture, countDownInterval);
+        }
+
+        @Override
+        public void onTick(long millisUntilFinished) {
+            popupmenuWindow3();
+        }
+
+        @Override
+        public void onFinish() {
+            if (popupWindow2 != null && popupWindow2.isShowing()) {
+                popupWindow2.dismiss();
+            }
         }
     }
 
@@ -208,6 +280,23 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     MessageReceiver receiver;
     double lastLatitude;
     double lastLongitude;
+    MQService mqService;
+    ServiceConnection connection=new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MQService.LocalBinder binder= (MQService.LocalBinder) service;
+            mqService=binder.getService();
+            if (mqService!=null){
+                mqService.getData(topicName,0x77);
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    };
+
     class MessageReceiver extends BroadcastReceiver {
 
         @Override
@@ -347,6 +436,12 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
     @Override
     protected void onDestroy() {
         mapView.onDestroy();
+        if (receiver!=null){
+            unregisterReceiver(receiver);
+        }
+        if (bind){
+            unbindService(connection);
+        }
         super.onDestroy();
 
     }
