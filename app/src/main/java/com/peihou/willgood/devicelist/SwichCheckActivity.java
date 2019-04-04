@@ -81,6 +81,7 @@ public class SwichCheckActivity extends BaseActivity {
         list.add(new SwtichState(0,"开关量6","",0));
         list.add(new SwtichState(0,"开关量7","",0));
         list.add(new SwtichState(0,"开关量8","",0));
+        list.add(new SwtichState(0,"开关量8","",0));
 
 
         adapter=new MyAdapter(this,list);

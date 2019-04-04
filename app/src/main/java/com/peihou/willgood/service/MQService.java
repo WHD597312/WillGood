@@ -1,9 +1,13 @@
 package com.peihou.willgood.service;
 
 import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -11,15 +15,19 @@ import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.support.annotation.Nullable;
+import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.utils.DistanceUtil;
 import com.google.gson.Gson;
 import com.iflytek.cloud.ErrorCode;
 import com.iflytek.cloud.InitListener;
@@ -29,8 +37,6 @@ import com.iflytek.cloud.SpeechSynthesizer;
 import com.iflytek.cloud.SpeechUtility;
 import com.iflytek.cloud.SynthesizerListener;
 import com.peihou.willgood.activity.MainActivity;
-import com.peihou.willgood.custom.AlermDialog;
-import com.peihou.willgood.custom.AlermDialog4;
 import com.peihou.willgood.custom.WeakRefHandler;
 import com.peihou.willgood.database.dao.impl.DeviceAlermDaoImpl;
 import com.peihou.willgood.database.dao.impl.DeviceDaoImpl;
@@ -56,7 +62,6 @@ import com.peihou.willgood.util.ToastUtil;
 import com.peihou.willgood.util.UUID;
 import com.peihou.willgood.util.http.BaseWeakAsyncTask;
 
-
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -70,17 +75,26 @@ import org.json.JSONObject;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class MQService extends Service {
 
@@ -105,9 +119,11 @@ public class MQService extends Service {
     private DeviceDaoImpl deviceDao;//设备别欧操作者
     private TimerTaskDaoImpl timerTaskDao;
 
+//    private DeviceAnalogDaoImpl deviceAnalogDao;
     private DeviceAlermDaoImpl deviceAlermDao;
     private DeviceLinkedTypeDaoImpl deviceLinkedTypeDao;//设备联动类型操作对象
     private DeviceLinkDaoImpl deviceLinkDao;//设备温度，湿度，开关量，电流，电压联动操作对象
+//    private DeviceMoniLinkDaoDaoImpl deviceMoniLinkDaoDao;//设备模拟量联动操纵对象
     private List<Line2> lines = new ArrayList<>();//线路集合
     StringBuffer sb = new StringBuffer();
     SpeechReceiver reciiver;//语音播报广播
@@ -157,79 +173,20 @@ public class MQService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        connect();
-        if (intent != null) {
-            String reconnect = intent.getStringExtra("reconnect");
-            if (!TextUtils.isEmpty(reconnect)) {
-                countTime2.start();
+        if (intent!=null && intent.hasExtra("restart")){
+            int restart=intent.getIntExtra("restart",0);
+            Log.i("restart","-->"+restart);
+            if (restart==1){
+                connect(1);
             }
         }
-
         return super.onStartCommand(intent, flags, startId);
-    }
-
-    CountTime2 countTime2=new CountTime2(2000,1000);
-    class CountTime2 extends CountDownTimer {
-
-        /**
-         * @param millisInFuture    The number of millis in the future from the call
-         *                          to {@link #start()} until the countdown is done and {@link #onFinish()}
-         *                          is called.
-         * @param countDownInterval The interval along the way to receive
-         *                          {@link #onTick(long)} callbacks.
-         */
-        public CountTime2(long millisInFuture, long countDownInterval) {
-            super(millisInFuture, countDownInterval);
-        }
-
-        @Override
-        public void onTick(long millisUntilFinished) {
-
-        }
-
-        @Override
-        public void onFinish() {
-            if (deviceDao!=null){
-                List<Device> devices=deviceDao.findAllDevice();
-                if (!devices.isEmpty()){
-                    new LoadDataAsync(MQService.this).execute(devices);
-                }
-            }
-        }
-    }
-
-    class LoadDataAsync extends BaseWeakAsyncTask<List<Device>, Void, Integer, MQService> {
-
-        public LoadDataAsync(MQService mqService) {
-            super(mqService);
-        }
-
-        @Override
-        protected Integer doInBackground(MQService mqService, List<Device>... lists) {
-            List<Device> devices = lists[0];
-            try {
-                for (Device device : devices) {
-                    String deviceMac = device.getDeviceOnlyMac();
-                    String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
-                    getData(topicName, 0x11);
-                    Thread.sleep(300);
-                    getData(topicName, 0x44);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(MQService mqService, Integer integer) {
-
-        }
     }
 
     public class LocalBinder extends Binder {
         public MQService getService() {
             Log.i(TAG, "Binder");
+            connect(0);
             return MQService.this;
         }
     }
@@ -249,19 +206,16 @@ public class MQService extends Service {
         }
     }
 
-    @Override
-    public boolean stopService(Intent name) {
-        Log.i(TAG, "stopService");
-        connect();
-        return super.stopService(name);
-    }
 
-    public void connect() {
+    public void connect(int state) {
         try {
             if (client != null && client.isConnected() == false) {
                 client.connect(options);
             }
-            new ConAsync(MQService.this).execute();
+            if (state==1) {
+                new ConAsync(MQService.this).execute();
+                countTime2.start();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -295,6 +249,7 @@ public class MQService extends Service {
         }
     }
 
+
     class ConAsync extends BaseWeakAsyncTask<Void, Void, Void, MQService> {
 
         public ConAsync(MQService mqService) {
@@ -309,6 +264,7 @@ public class MQService extends Service {
                     client.connect(options);
                 }
                 List<String> topicNames = getTopicNames();
+                Log.i("ConAsync","-->"+topicNames.size());
                 if (client.isConnected() && !topicNames.isEmpty()) {
                     for (String topicName : topicNames) {
                         if (!TextUtils.isEmpty(topicName)) {
@@ -329,6 +285,24 @@ public class MQService extends Service {
         }
     }
 
+    public void connectMqtt(String deviceMac){
+        try {
+            if (client!=null && !client.isConnected()){
+                client.connect(options);
+            }
+            String server = "qjjc/gateway/" + deviceMac + "/client_to_server";
+            String lwt = "qjjc/gateway/" + deviceMac + "/lwt";
+
+            if (client.isConnected()){
+                subscribe(server,1);
+                subscribe(lwt,1);
+                String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
+                getData(topicName,0x11);
+            }
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+    }
     public void subscribeAll(List<Device> devices) {
         try {
             for (Device device : devices) {
@@ -386,6 +360,7 @@ public class MQService extends Service {
             options.setConnectionTimeout(15);
             // 设置会话心跳时间 单位为秒 服务器会每隔1.5*20秒的时间向客户端发送个消息判断客户端是否在线，但这个方法并没有重连的机制
             options.setKeepAliveInterval(60);
+            options.setAutomaticReconnect(true);//打开重连机制
 
 
 //            options.setWill("sssssssss","rangossssss".getBytes("UTF-8"),1,false);
@@ -416,12 +391,9 @@ public class MQService extends Service {
                         Map<String, Object> params = new HashMap<>();
                         params.put("topicName", topicName);
                         params.put("bytes", bytes);
+                        Log.i("topicNamehhhhhhhhh", "-->" + topicName);
                         if (topicName.contains("client_to_server")) {
-                            Log.i("topicNamehhhhhhhhh", "-->" + topicName);
-                            Message msg = handler.obtainMessage();
-                            msg.what = 10005;
-                            msg.obj = params;
-                            handler.sendMessage(msg);
+                            new LoadAsyncTask(MQService.this).execute(params);
                         } else if (topicName.contains("lwt")) {
                             String macAddress = topicName.substring(13, topicName.lastIndexOf("/"));
                             Device device = deviceDao.findDeviceByMac(macAddress);
@@ -470,24 +442,12 @@ public class MQService extends Service {
     public List<Linked> getLinkeds(String deviceMac, int type) {
         return deviceLinkDao.findLinkeds(deviceMac, type);
     }
-    /**
-     * 批量更新联动
-     * @param linkeds
-     */
-    public void updateLinkeds(List<Linked> linkeds){
-        deviceLinkDao.updates(linkeds);
-    }
-    /**
-     * 批量更新定时
-     * @param timerTasks
-     */
-    public void updateTimerTasks(List<TimerTask> timerTasks){
-        timerTaskDao.updateTimers(timerTasks);
-    }
-
 
     public void updateDevice(Device device) {
         deviceDao.update(device);
+    }
+    public List<Device> getDevices(){
+        return deviceDao.findAllDevice();
     }
 
     /**
@@ -513,12 +473,20 @@ public class MQService extends Service {
             int[] data = new int[bytes.length];
 
             int sum = 0;
+            int sum2 = 0;
             for (int i = 0; i < data.length; i++) {
                 int k = bytes[i];
                 data[i] = k < 0 ? k + 256 : k;
                 if (i < data.length - 2) {
                     sum += data[i];
                 }
+                if (i >= 4 && i < data.length - 2) {
+                    sum2 += data[i];
+                }
+            }
+
+            if (sum2 == 0) {
+                return null;
             }
             int check = sum % 256;
             if (check != data[data.length - 2]) {
@@ -548,8 +516,8 @@ public class MQService extends Service {
             double lineJog = 0;
             int operateState = 0;
             Device device = null;
-            double latitude=0;
-            double longitude=0;
+            double latitude = 0;
+            double longitude = 0;
             try {
                 if (topicName.contains("client_to_server")) {
                     int funCode = data[1];
@@ -649,7 +617,7 @@ public class MQService extends Service {
                                 if ((list2 != null && list2.size() != 16)) {
                                     deviceLineDao.deleteDeviceLines(list2);
                                     for (int i = 1; i <= 16; i++) {
-                                        Line2 line21 = new Line2(false, i + "路", 0, false, i, macAddress);
+                                        Line2 line21 = new Line2(false, "线路", 0, false, i, macAddress);
                                         line2List.add(line21);
                                     }
                                     deviceLineDao.insertDeviceLines(line2List);
@@ -741,9 +709,18 @@ public class MQService extends Service {
                             deviceDao.update(device);
                             offlineDevices.put(macAddress, device);
                             Message msg = handler.obtainMessage();
-                            msg.obj = macAddress;
-                            msg.what = 101;
-                            handler.sendMessage(msg);
+                            CountTimer countTimer2=null;
+                            for (CountTimer countTimer:countTimers){
+                                if (countTimer.getMacArress().equals(macAddress) && countTimer.getMillisUntilFinished()/1000==0){
+                                    countTimer2=countTimer;
+                                    break;
+                                }
+                            }
+                            if (countTimer2!=null){
+                                msg.obj = countTimer2;
+                                msg.what = 101;
+                                handler.sendMessage(msg);
+                            }
                         }
                     } else if (funCode == 0x22) {
                         int mcuVersion = data[2];
@@ -795,7 +772,7 @@ public class MQService extends Service {
                                 timerTaskDao.delete(timerTask);
                                 operateState = 1;
                             }
-                        }  else if (state==5){
+                        } else if (state==5){
                             timerTaskDao.deleteTimers(macAddress);
                             operateState = 1;
                         }else {
@@ -803,28 +780,10 @@ public class MQService extends Service {
                                 operateState = 0;
                                 if (choice == 0x11) {
                                     timerTask = new TimerTask(macAddress, 0x11, year, month, day, hour, min, controlState, prelines, lastlines, 1);
-//                                    String timer=year+"-"+month+"-"+day+" "+hour+":"+min;
-//                                    SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm");
-//                                    Date date=format.parse(timer);
-//                                    long time=date.getTime();
-//                                    timerTask.setSeconds(time);
-//                                    Calendar calendar=Calendar.getInstance();
-//                                    int year2=calendar.get(Calendar.YEAR);
-//                                    int month2=calendar.get(Calendar.MONTH)+1;
-//                                    int day2=calendar.get(Calendar.DAY_OF_MONTH);
-//                                    int hour2=calendar.get(Calendar.HOUR_OF_DAY);
-//                                    int min2=calendar.get(Calendar.MINUTE);
-//                                    timer=year2+"-"+month2+"-"+day2+" "+hour2+":"+min2;
-//                                    format=new SimpleDateFormat("yyyy-MM-dd HH:mm");
-//                                    date=format.parse(timer);
-//                                    long time2=date.getTime();
-//                                    List<TimerTask> timerTasks=timerTaskDao.findPreTimers(macAddress,time2);
-//                                    if (timerTasks!=null && !timerTasks.isEmpty()){
-//                                        timerTaskDao.deleteTimers(timerTasks);
-//                                    }
                                 } else if (choice == 0x22) {
                                     timerTask = new TimerTask(macAddress, 0x22, week, hour, min, controlState, prelines, lastlines, 1);
                                 }
+                                timerTask.setVisitity(1);
                                 lines.clear();
                                 lines = deviceLineDao.findDeviceLines(macAddress);
                                 int[] pre = TenTwoUtil.changeToTwo(prelines);
@@ -857,7 +816,6 @@ public class MQService extends Service {
                                 timerTask.setState(state);
                                 timerTask.setName(lines);
                                 timerTaskFlag = 0;
-                                timerTask.setVisitity(1);
                                 timerTaskDao.insert(timerTask);
                             } else {
                                 lines.clear();
@@ -900,7 +858,6 @@ public class MQService extends Service {
                                     timerTask.setDay(0);
                                     timerTask.setWeek(week);
                                 }
-                                timerTask.setVisitity(1);
                                 timerTask.setName(lines);
                                 timerTask.setHour(hour);
                                 timerTask.setMin(min);
@@ -910,6 +867,7 @@ public class MQService extends Service {
                                 timerTask.setState(state);
                                 timerTaskId = timerTask.getId();
                                 timerTaskFlag = 1;
+                                timerTask.setVisitity(1);
                                 timerTaskDao.update(timerTask);
                             }
                         }
@@ -925,7 +883,6 @@ public class MQService extends Service {
                             linkedTypes.add(new LinkedType(macAddress, 2, "开关量联动", mcuVersion, 0));
                             linkedTypes.add(new LinkedType(macAddress, 3, "电流联动", mcuVersion, 0));
                             linkedTypes.add(new LinkedType(macAddress, 4, "电压联动", mcuVersion, 0));
-//                            linkedTypes.add(new LinkedType(macAddress, 5, "模拟量联动", mcuVersion, 0));
                             deviceLinkedTypeDao.insertLinkedTypes(linkedTypes);
                         }
                         for (int i = 0; i < 5; i++) {
@@ -988,7 +945,7 @@ public class MQService extends Service {
                         int state = data[8];//联动状态 0关闭 1打开 2删除
                         if (type == 2) {
                             linked = deviceLinkDao.findLinked(macAddress, triState, preLines, lastLines, triType, switchLine);
-                        } else {
+                        }else {
                             linked = deviceLinkDao.findLinked(macAddress, type, condition, triState, preLines, lastLines, triType);
                         }
                         if (state == 4) {
@@ -1006,7 +963,7 @@ public class MQService extends Service {
                                 deviceLinkDao.delete(linked);
                                 operateState = 1;
                             }
-                        } else if (state==5){
+                        }else if (state==5){
                             deviceLinkDao.deleteLinekeds(macAddress);
                             operateState = 1;
                         }else {
@@ -1056,9 +1013,9 @@ public class MQService extends Service {
                                     name = "电压" + size;
                                 }
                                 if (type == 2) {
-                                    linked = new Linked(macAddress, type, name, condition, conditionState, 1, preLines, lastLines, triType);
+                                    operateState = 0;
                                     name = "开关量" + switchLine;
-                                    linked.setName(name);
+                                    linked = new Linked(macAddress, type, name, condition, conditionState, 1, preLines, lastLines, triType);
                                     linked.setSwitchLine(switchLine);
                                     linked.setVisitity(1);
                                 } else {
@@ -1099,6 +1056,7 @@ public class MQService extends Service {
                                     lines = "";
                                 }
 
+
                                 linked.setLines(lines);
                                 linked.setCondition(condition);
                                 linked.setConditionState(conditionState);
@@ -1112,8 +1070,6 @@ public class MQService extends Service {
                                     String name = "开关量" + switchLine;
                                     linked.setName(name);
                                 }
-
-
                                 deviceLinkDao.update(linked);
                             }
 
@@ -1123,7 +1079,7 @@ public class MQService extends Service {
                         int link = data[4];
                         moniLinkSwitch = TenTwoUtil.changeToTwo(link);
                         moniMap.put(macAddress, moniLinkSwitch);
-                    } else if (funCode == 0x44 && data.length == 13) {
+                    }  else if (funCode == 0x44 && data.length == 13) {
                         int jogHigh = data[4];
                         int jogLow = data[5];
 
@@ -1136,47 +1092,7 @@ public class MQService extends Service {
                             deviceDao.update(device2);
                             device = device2;
                         }
-                    } else if (funCode == 0x46) {
-                        int mcuVersion = data[2];
-                        map.clear();
-
-                        List<Line2> line2List = deviceLineDao.findDeviceLines(macAddress);
-                        for (int i = 4; i < 20; i += 2) {
-                            int interLock = data[i];
-                            int interLock2 = data[i + 1];
-
-                            if (interLock == 0 && interLock2 == 0) {
-                                continue;
-                            }
-
-                            Line2 line = deviceLineDao.findDeviceLine(macAddress, interLock);
-                            Line2 line2 = deviceLineDao.findDeviceLine(macAddress, interLock2);
-
-                            if (line != null && line2 != null) {
-                                String lock = interLock + "&" + interLock2;
-                                line.setLock(1);
-                                line.setOnClick(false);
-                                line.setInterLock(lock);
-
-                                line2.setLock(1);
-                                line2.setOnClick(false);
-                                line2.setInterLock(lock);
-                                line2List.remove(line);
-                                line2List.remove(line2);
-                                deviceLineDao.update(line);
-                                deviceLineDao.update(line2);
-                                map.put(lock, lock);
-                            }
-                        }
-                        for (Line2 line2 : line2List) {
-                            line2.setOnClick(false);
-                            line2.setInterLock(null);
-                            line2.setLock(0);
-                            deviceLineDao.update(line2);
-                        }
-
-
-                    } else if (funCode == 0x55) {
+                    }  else if (funCode == 0x55) {
                         switchCheck = data[4];
                         switchCheck2 = data[5];
                         int[] x = TenTwoUtil.changeToTwo(switchCheck);
@@ -1241,16 +1157,6 @@ public class MQService extends Service {
                         } else if (x2[6] == 0 && x2[7] == 0) {
                             switchState8 = 0;
                         }
-                        if (switchChecks.size()!=8){
-                            switchChecks.add(new SwtichState(0,"开关量1","",0));
-                            switchChecks.add(new SwtichState(0,"开关量2","",0));
-                            switchChecks.add(new SwtichState(0,"开关量3","",0));
-                            switchChecks.add(new SwtichState(0,"开关量4","",0));
-                            switchChecks.add(new SwtichState(0,"开关量5","",0));
-                            switchChecks.add(new SwtichState(0,"开关量6","",0));
-                            switchChecks.add(new SwtichState(0,"开关量7","",0));
-                            switchChecks.add(new SwtichState(0,"开关量8","",0));
-                        }
                         if (switchChecks.size() == 8) {
                             for (int i = 0; i < 8; i++) {
                                 SwtichState swtichState = switchChecks.get(i);
@@ -1299,29 +1205,15 @@ public class MQService extends Service {
                         int powerState = data[19];
                         int switchState = data[20];
                         int[] x = TenTwoUtil.changeToTwo(type);
-                        alerms = deviceAlermDao.findDeviceAlerms(macAddress);
 
-                        if (alerms.size()!=8){
-                            deviceAlermDao.deleteDeviceAlerms(macAddress);
-                            alerms.add(new Alerm("来电报警",1,false,macAddress));
-                            alerms.add(new Alerm("断电报警",2,false,macAddress));
-                            alerms.add(new Alerm("温度报警",3,false,macAddress));
-                            alerms.add(new Alerm("湿度报警",4,false,macAddress));
-                            alerms.add(new Alerm("电压报警",5,false,macAddress));
-                            alerms.add(new Alerm("电流报警",6,false,macAddress));
-                            alerms.add(new Alerm("功率报警",7,false,macAddress));
-                            alerms.add(new Alerm("开关量报警",8,false,macAddress));
-                            deviceAlermDao.insertDeviceAlerms(alerms);
-                        }
-
-                        Alerm alerm = deviceAlermDao.findDeviceAlerm(macAddress, 1);//来电报警
-                        Alerm alerm2 = deviceAlermDao.findDeviceAlerm(macAddress, 2);//断电报警
-                        Alerm alerm3 = deviceAlermDao.findDeviceAlerm(macAddress, 3);//温度报警
-                        Alerm alerm4 = deviceAlermDao.findDeviceAlerm(macAddress, 4);//湿度报警
-                        Alerm alerm5 = deviceAlermDao.findDeviceAlerm(macAddress, 5);//电压报警
-                        Alerm alerm6 = deviceAlermDao.findDeviceAlerm(macAddress, 6);//电流报警
-                        Alerm alerm7 = deviceAlermDao.findDeviceAlerm(macAddress, 7);//功率报警
-                        Alerm alerm8 = deviceAlermDao.findDeviceAlerm(macAddress, 8);//开关量报警
+                        Alerm alerm = deviceAlermDao.findDeviceAlerm(macAddress, 0);//来电报警
+                        Alerm alerm2 = deviceAlermDao.findDeviceAlerm(macAddress, 1);//断电报警
+                        Alerm alerm3 = deviceAlermDao.findDeviceAlerm(macAddress, 2);//温度报警
+                        Alerm alerm4 = deviceAlermDao.findDeviceAlerm(macAddress, 3);//湿度报警
+                        Alerm alerm5 = deviceAlermDao.findDeviceAlerm(macAddress, 4);//电压报警
+                        Alerm alerm6 = deviceAlermDao.findDeviceAlerm(macAddress, 5);//电流报警
+                        Alerm alerm7 = deviceAlermDao.findDeviceAlerm(macAddress, 6);//功率报警
+                        Alerm alerm8 = deviceAlermDao.findDeviceAlerm(macAddress, 7);//开关量报警
 
 
                         alerm.setState(x[0]);
@@ -1344,6 +1236,8 @@ public class MQService extends Service {
                         alerm7.setState2(powerState);
                         alerm8.setState2(switchState);
 
+                        int deviceAlarmFlag = alerm.getDeviceAlarmFlag();
+                        int deviceAlarmBroadcast = alerm.getDeviceAlarmBroadcast();
 
                         deviceAlermDao.update(alerm);
                         deviceAlermDao.update(alerm2);
@@ -1374,59 +1268,57 @@ public class MQService extends Service {
                                 return 0;
                             }
                         });
-                    }else if (funCode==0x77){
+                    } else if (funCode == 0x77) {
+                        int symbol = data[6];
+                        int[] x = TenTwoUtil.changeToTwo(symbol);
+                        int x1 = x[0];
+                        int x2 = x[1];
+                        int x3 = x[2];
+                        int x4 = x[3];
+                        String s = "";
+                        if (x1 == 1 && x2 == 0 && x3 == 1 && x4 == 0) {
 
-                            int symbol=data[6];
-                            int[] x=TenTwoUtil.changeToTwo(symbol);
-                            int x1=x[0];
-                            int x2=x[1];
-                            int x3=x[2];
-                            int x4=x[3];
-                            String s="";
-                            if (x1==1 && x2==0 && x3==1 && x4==0){
+                        } else {
+                            s = "-";
+                        }
+                        int intPart = data[7];
+                        String floatPart = data[8] + "";
+                        String floatPart2 = data[9] + "";
+                        String floatPart3 = data[10] + "";
 
-                            }else{
-                                s="-";
-                            }
-                            int intPart=data[7];
-                            String floatPart=data[8]+"";
-                            String floatPart2=data[9]+"";
-                            String floatPart3=data[10]+"";
+                        int intPart2 = data[11];
+                        String floatPart4 = data[12] + "";
+                        String floatPart5 = data[13] + "";
+                        String floatPart6 = data[14] + "";
 
-                            int intPart2=data[11];
-                            String floatPart4=data[12]+"";
-                            String floatPart5=data[13]+"";
-                            String floatPart6=data[14]+"";
+                        if (floatPart.length() == 1) {
+                            floatPart = "0" + floatPart;
+                        }
+                        if (floatPart2.length() == 1) {
+                            floatPart2 = "0" + floatPart2;
+                        }
 
-                            if (floatPart.length()==1){
-                                floatPart="0"+floatPart;
-                            }
-                            if (floatPart2.length()==1){
-                                floatPart2="0"+floatPart2;
-                            }
+                        if (floatPart3.length() == 1) {
+                            floatPart3 = "0" + floatPart3;
+                        }
+                        if (floatPart4.length() == 1) {
+                            floatPart4 = "0" + floatPart4;
+                        }
+                        if (floatPart5.length() == 1) {
+                            floatPart5 = "0" + floatPart5;
+                        }
 
-                            if (floatPart3.length()==1){
-                                floatPart3="0"+floatPart3;
-                            }
-                            if (floatPart4.length()==1){
-                                floatPart4="0"+floatPart4;
-                            }
-                            if (floatPart5.length()==1){
-                                floatPart5="0"+floatPart5;
-                            }
+                        if (floatPart6.length() == 1) {
+                            floatPart6 = "0" + floatPart6;
+                        }
 
-                            if (floatPart6.length()==1){
-                                floatPart6="0"+floatPart6;
-                            }
+                        String s1 = s + intPart + "." + floatPart + floatPart2 + floatPart3;
+                        String s2 = s + intPart2 + "." + floatPart4 + floatPart5 + floatPart6;
 
-                            String s1=s+intPart+"."+floatPart+floatPart2+floatPart3;
-                            String s2=s+intPart2+"."+floatPart4+floatPart5+floatPart6;
+                        latitude = Double.parseDouble(s1);
+                        longitude = Double.parseDouble(s2);
 
-                            latitude=Double.parseDouble(s1);
-                            longitude=Double.parseDouble(s2);
-
-
-                    }else if (funCode == 0x99) {
+                    }  else if (funCode == 0x99) {
                         int type = 0;
                         int alermType = data[4];
                         int deviceControll = 0;
@@ -1462,21 +1354,15 @@ public class MQService extends Service {
                             msg.arg1 = type;
                             handler.sendMessage(msg);
                         }
-                        if (alerm.getDeviceAlarmBroadcast() == 1 || alerm.getDeviceAlarmBroadcast() == 2) {
-                            String cotent = alerm.getContent();
-                            Message msg = handler.obtainMessage();
-                            msg.what = 10004;
-                            msg.arg1 = type;
-                            msg.obj = cotent;
-                            handler.sendMessage(msg);
-                        }
-                    } else if (funCode == 0xaa) {
-                        for (int j = 4; j < data.length - 2; j++) {
-                            rs485 = rs485 + "" + data[j] + " ";
-                        }
-                        device = deviceDao.findDeviceByMac(macAddress);
-                        device.setRe485(rs485);
-                        deviceDao.update(device);
+//                        if (alerm.getDeviceAlarmBroadcast() == 1 || alerm.getDeviceAlarmBroadcast() == 2) {
+//                            String cotent = alerm.getContent();
+//                            Message msg = handler.obtainMessage();
+//                            msg.what = 10004;
+//                            msg.arg1 = type;
+//                            msg.obj = cotent;
+//                            handler.sendMessage(msg);
+//                        }
+//                        int line = data[5];
                     }
                     if (MainActivity.running) {
                         Intent intent = new Intent("MainActivity");
@@ -1538,8 +1424,6 @@ public class MQService extends Service {
                         intent.putExtra("online",true);
                         sendBroadcast(intent);
                     }
-
-
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -1564,7 +1448,8 @@ public class MQService extends Service {
             @Override
             public void run() {
                 if (!client.isConnected()) {
-                    connect();
+                    connect(1);
+                    Log.i("MQService","-->startReconnect");
                 }
             }
         }, 0, 1000, TimeUnit.MILLISECONDS);
@@ -1575,13 +1460,12 @@ public class MQService extends Service {
             Log.e("addCountTimer", "-->" + macAddress);
             String deviceMac = timer.getMacArress();
             if (macAddress.equals(deviceMac)) {
-                continue;
-            } else {
-                CountTimer countTimer = new CountTimer(1000 * 60 * 30, 1000);
-                countTimer.setMacArress(macAddress);
-                countTimers.add(countTimer);
+                return;
             }
         }
+        CountTimer countTimer = new CountTimer(1000 * 60 * 5*6, 1000);
+        countTimer.setMacArress(macAddress);
+        countTimers.add(countTimer);
     }
 
     public void clearCountTimer() {
@@ -1599,6 +1483,63 @@ public class MQService extends Service {
     }
 
     List<CountTimer> countTimers = new LinkedList<>();
+
+    CountTime2 countTime2=new CountTime2(2000,1000);
+    class CountTime2 extends CountDownTimer {
+
+        /**
+         * @param millisInFuture    The number of millis in the future from the call
+         *                          to {@link #start()} until the countdown is done and {@link #onFinish()}
+         *                          is called.
+         * @param countDownInterval The interval along the way to receive
+         *                          {@link #onTick(long)} callbacks.
+         */
+        public CountTime2(long millisInFuture, long countDownInterval) {
+            super(millisInFuture, countDownInterval);
+        }
+
+        @Override
+        public void onTick(long millisUntilFinished) {
+            Log.i("CountTime2","-->"+millisUntilFinished/1000);
+        }
+
+        @Override
+        public void onFinish() {
+            if (deviceDao!=null){
+                List<Device> devices=deviceDao.findAllDevice();
+                if (!devices.isEmpty()){
+                    new LoadDataAsync(MQService.this).execute(devices);
+                }
+            }
+        }
+    }
+
+    class LoadDataAsync extends BaseWeakAsyncTask<List<Device>, Void, Integer, MQService> {
+
+        public LoadDataAsync(MQService mqService) {
+            super(mqService);
+        }
+
+        @Override
+        protected Integer doInBackground(MQService mqService, List<Device>... lists) {
+            List<Device> devices = lists[0];
+            try {
+                for (Device device : devices) {
+                    String deviceMac = device.getDeviceOnlyMac();
+                    String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
+                    getData(topicName, 0x11);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(MQService mqService, Integer integer) {
+
+        }
+    }
 
     class CountTimer extends CountDownTimer {
 
@@ -1620,11 +1561,12 @@ public class MQService extends Service {
         @Override
         public void onTick(long millisUntilFinished) {
             this.millisUntilFinished = millisUntilFinished;
-            Log.e("millisUntilFinished", "-->" + millisUntilFinished);
+            Log.e("millisUntilFinished", macArress+"->" + millisUntilFinished/1000);
         }
 
         @Override
         public void onFinish() {
+            Log.e("millisUntilFinished", "-->" + millisUntilFinished/1000);
 
             String topicName = "qjjc/gateway/" + macArress + "/server_to_client";
             getData(topicName, 0x11);
@@ -1700,6 +1642,14 @@ public class MQService extends Service {
      */
     public boolean subscribe(String topicName, int qos) {
         boolean flag = false;
+        try {
+            if (client!=null && !client.isConnected()){
+                client.connect(options);
+            }
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+
         if (client != null && client.isConnected()) {
             try {
                 client.subscribe(topicName, qos);
@@ -1713,6 +1663,50 @@ public class MQService extends Service {
 
     public String getResult() {
         return result;
+    }
+
+    public void insert(Device device) {
+        String deviceMac = device.getDeviceOnlyMac();
+        Device device2 = deviceDao.findDeviceByMac(deviceMac);
+        if (device2 != null) {
+            deviceDao.update(device);
+        } else {
+            List<Device> devices = deviceDao.findDevicesByMac(deviceMac);
+            if (devices != null && !devices.isEmpty()) {
+                deviceDao.deleteDevices(devices);
+            }
+            deviceDao.insert(device);
+        }
+    }
+
+    /**
+     * 批量更新定时
+     *
+     * @param timerTasks
+     */
+    public void updateTimerTasks(List<TimerTask> timerTasks) {
+        timerTaskDao.updateTimers(timerTasks);
+    }
+
+    /**
+     * 批量更新联动
+     *
+     * @param linkeds
+     */
+    public void updateLinkeds(List<Linked> linkeds) {
+        deviceLinkDao.updates(linkeds);
+    }
+
+
+
+    public void updateSwitchCheck() {
+        if (!switchChecks.isEmpty()) {
+            for (int i = 0; i < switchChecks.size(); i++) {
+                SwtichState swtichState = switchChecks.get(i);
+                swtichState.setState(0);
+                switchChecks.set(i, swtichState);
+            }
+        }
     }
 
     /**
@@ -1761,36 +1755,7 @@ public class MQService extends Service {
     }
 
 
-    AlermDialog4 alermDialog4;
 
-    private void setAlermDialog(int mode) {
-
-        try {
-            alermDialog4 = new AlermDialog4(getApplicationContext());
-            if (alermDialog4 != null && alermDialog4.isShowing()) {
-                return;
-            }
-            alermDialog4.setMode(mode);
-            alermDialog4.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
-            alermDialog4.setCanceledOnTouchOutside(false);
-            alermDialog4.setOnNegativeClickListener(new AlermDialog4.OnNegativeClickListener() {
-                @Override
-                public void onNegativeClick() {
-                    alermDialog4.dismiss();
-                }
-            });
-            alermDialog4.setOnPositiveClickListener(new AlermDialog4.OnPositiveClickListener() {
-                @Override
-                public void onPositiveClick() {
-                    alermDialog4.dismiss();
-                }
-            });
-            alermDialog4.show();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
 
     /**
      * 初始化语音合成监听。
@@ -1842,7 +1807,6 @@ public class MQService extends Service {
         }
     }
 
-    private AlermDialog alermDialog;
 
 
     /**
@@ -1852,24 +1816,25 @@ public class MQService extends Service {
      */
     private SpeechSynthesizer mTts;// 语音合成
 
-    //    public void starSpeech(String deviceMac,String content) {
-//
-//        // 2.合成参数设置，详见《科大讯飞MSC API手册(Android)》SpeechSynthesizer 类
-//        Device device=deviceDao.findDeviceByMac(deviceMac);
-//        if (device!=null){
-//            mTts.setParameter(SpeechConstant.VOICE_NAME, "vixy");// 设置发音人
-//            mTts.setParameter(SpeechConstant.SPEED, "50");// 设置语速
-//            mTts.setParameter(SpeechConstant.VOLUME, "80");// 设置音量，范围0~100
-//            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD); // 设置云端
-//            // 设置合成音频保存位置（可自定义保存位置），保存在“./sdcard/iflytek.pcm”
-//            // 保存在SD卡需要在AndroidManifest.xml添加写SD卡权限
-//            // 3.开始合成
-//            mTts.startSpeaking(content, mSynListener);
-//        }
-//        // 合成监听器
-//        //
-//
-//    }
+    public void starSpeech(String deviceMac, String content) {
+
+        // 2.合成参数设置，详见《科大讯飞MSC API手册(Android)》SpeechSynthesizer 类
+        Device device = deviceDao.findDeviceByMac(deviceMac);
+        if (device != null && device.getVlice2() == 1) {
+            mTts.setParameter(SpeechConstant.VOICE_NAME, "vixy");// 设置发音人
+            mTts.setParameter(SpeechConstant.SPEED, "50");// 设置语速
+            mTts.setParameter(SpeechConstant.VOLUME, "80");// 设置音量，范围0~100
+            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD); // 设置云端
+            // 设置合成音频保存位置（可自定义保存位置），保存在“./sdcard/iflytek.pcm”
+            // 保存在SD卡需要在AndroidManifest.xml添加写SD卡权限
+            // 3.开始合成
+            mTts.startSpeaking(content, mSynListener);
+        }
+        // 合成监听器
+        //
+
+    }
+
     public void starSpeech2(String content) {
 
         // 2.合成参数设置，详见《科大讯飞MSC API手册(Android)》SpeechSynthesizer 类
@@ -1950,6 +1915,7 @@ public class MQService extends Service {
             if (!success) {
                 publish(topicName, 1, bytes);
             }
+            Log.i("success","--->"+success);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -2003,11 +1969,11 @@ public class MQService extends Service {
             datas[17] = (byte) (sum % 256);
             datas[18] = 0x09;
 
-
             success = publish(topicName, 1, datas);
             if (!success) {
                 publish(topicName, 1, datas);
             }
+            Log.i("Basic","-->"+success);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -2133,7 +2099,7 @@ public class MQService extends Service {
             int conditionState = linked.getConditionState();//控制状态
             int preLines = linked.getPreLines();
             int lastLines = linked.getLastLines();
-            int triType = linked.getTriType();//1单次触发，0循环触发
+            int triType = linked.getTriType();//0单次触发，1循环触发
             int state = linked.getState();
             int switchLine = linked.getSwitchLine();
             int[] x = new int[8];
@@ -2156,8 +2122,7 @@ public class MQService extends Service {
                 x[5] = 1;
                 x[4] = 0;
             }
-
-           x[3]=triType;
+            x[3] = triType;
 
             int triType2 = TenTwoUtil.changeToTen(x);
             byte[] bytes = new byte[16];
@@ -2189,6 +2154,7 @@ public class MQService extends Service {
         }
         return false;
     }
+
 
 
     public Map<String, int[]> moniMap = new HashMap<>();
@@ -2269,6 +2235,10 @@ public class MQService extends Service {
 
     public List<Line2> getDeviceOnlineLiens(String deviceMac) {
         return deviceLineDao.findDeviceOnlineLines(deviceMac);
+    }
+
+    public void updateLines(List<Line2> lines) {
+        deviceLineDao.updates(lines);
     }
 
     /**
@@ -2442,12 +2412,16 @@ public class MQService extends Service {
         return true;
     }
 
+    /**
+     * 获取模拟量检测
+     *
+     * @param params
+     */
 
     private List<SwtichState> switchChecks = new ArrayList<>();
 
-    public List<SwtichState> getSwitchName() {
-        return switchChecks;
-    }
+
+
 
     public void update(Alerm alerm) {
         deviceAlermDao.update(alerm);
@@ -2462,33 +2436,10 @@ public class MQService extends Service {
                     ToastUtil.showShort(MQService.this, "设备" + name + "已离线");
                 }
             } else if (msg.what == 101) {
-                String macAddress = (String) msg.obj;
-                for (int i = 0; i < countTimers.size(); i++) {
-                    CountTimer countTimer = countTimers.get(i);
-                    if (macAddress.equals(countTimer.getMacArress()) && countTimer.getMillisUntilFinished() == 0) {
-                        countTimer.setMacArress(macAddress);
-                        countTimer.start();
-                        break;
-                    }
+                CountTimer countTimer = (CountTimer) msg.obj;
+                if (countTimer!=null){
+                    countTimer.start();
                 }
-            } else if (msg.what == 10001) {
-                String ss = (String) msg.obj;
-                ToastUtil.showShort(MQService.this, ss);
-            } else if (msg.what == 10003) {
-                int type = msg.arg1;
-                setAlermDialog(type);
-            } else if (msg.what == 10004) {
-                String content = (String) msg.obj;
-                sb.setLength(0);
-                sb.append(content + ",");
-                sb.append(content + ",");
-                sb.append(content);
-                starSpeech2(sb.toString());
-            } else if (msg.what == 10005) {
-                Log.i("tttttttttttttttttttttt", "llllllllllllllllll");
-                Map<String, Object> params = (Map<String, Object>) msg.obj;
-                new LoadAsyncTask(MQService.this).execute(params);
-
             }
             return true;
         }

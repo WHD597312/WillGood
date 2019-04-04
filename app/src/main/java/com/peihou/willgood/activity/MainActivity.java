@@ -54,9 +54,10 @@ import java.util.List;
 import butterknife.BindView;
 
 import butterknife.OnClick;
+import me.jessyan.autosize.internal.CustomAdapt;
 import retrofit2.http.OPTIONS;
 
-public class MainActivity extends BaseActivity {
+public class MainActivity extends BaseActivity  implements CustomAdapt {
 
 
     MyApplication application;
@@ -105,7 +106,6 @@ public class MainActivity extends BaseActivity {
     ImageView imgSwitch1;
     @BindView(R.id.img_switch2)
     ImageView imgSwitch2;
-    private SharedPreferences sharedPreferences;
 
     DeviceDaoImpl deviceDao;
 
@@ -151,7 +151,7 @@ public class MainActivity extends BaseActivity {
         if (device != null) {
             deviceMac = device.getDeviceOnlyMac();
             setMode();
-            topicName = "qjjc/gateway/" + deviceMac + "server_to_server";
+            topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
         }
 
         rotateAnimation = AnimationUtils.loadAnimation(this, R.anim.img_animation);
@@ -309,6 +309,16 @@ public class MainActivity extends BaseActivity {
 
     CountTimer countTimer = new CountTimer(2000, 1000);
 
+    @Override
+    public boolean isBaseOnWidth() {
+        return false;
+    }
+
+    @Override
+    public float getSizeInDp() {
+        return 667;
+    }
+
     class CountTimer extends CountDownTimer {
 
         /**
@@ -350,7 +360,7 @@ public class MainActivity extends BaseActivity {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        if (popupWindow2==null)
+        if (popupWindow2 == null)
             popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
@@ -397,7 +407,6 @@ public class MainActivity extends BaseActivity {
                             if (mqService != null) {
                                 mqService.getData(topicName, 0x11);
                             }
-
                         }
                     } else {
                         ToastUtil.show(this, "请打开配电系统", 0);
@@ -501,6 +510,19 @@ public class MainActivity extends BaseActivity {
                 break;
             case R.id.ll_switch1:
                 if (type == 1) {
+                    if (popupWindow2 != null && popupWindow2.isShowing()) {
+                        ToastUtil.showShort(this, "请稍后...");
+                        break;
+                    }
+                    if (!device.getOnline()) {
+                        if (mqService != null) {
+                            mqService.getData(topicName, 0x11);
+                        }
+                        countTimer.start();
+                        ToastUtil.show(this, "设备已离线", 0);
+                        break;
+                    }
+
                     if (isOpen1) {
                         isOpen1 = false;
                         setMode();
@@ -524,20 +546,30 @@ public class MainActivity extends BaseActivity {
             case R.id.ll_switch2:
                 if (type == 2) {
                     if (popupWindow2 != null && popupWindow2.isShowing()) {
-                        ToastUtil.show(this, "请稍后...", 0);
-                    } else {
-                        if (isOpen2) {
-                            device.setPrelineswitch(255);
-                            device.setLastlines(255);
-                        } else {
-                            device.setPrelineswitch(0);
-                            device.setLastlines(0);
-                        }
-                        if (mqService != null) {
-                            mqService.sendBasic(topicName, device);
-                            countTimer.start();
-                        }
+                        ToastUtil.showShort(this, "请稍后...");
+                        break;
                     }
+                    if (!device.getOnline()) {
+                        if (mqService != null) {
+                            mqService.getData(topicName, 0x11);
+                        }
+                        countTimer.start();
+                        ToastUtil.show(this, "设备已离线", 0);
+                        break;
+                    }
+
+                    if (isOpen2) {
+                        device.setPrelineswitch(255);
+                        device.setLastlines(255);
+                    } else {
+                        device.setPrelineswitch(0);
+                        device.setLastlines(0);
+                    }
+                    if (mqService != null) {
+                        mqService.sendBasic(topicName, device);
+                        countTimer.start();
+                    }
+
                 } else {
                     ToastUtil.show(this, "请添加控制系统设备", 0);
                 }
@@ -586,13 +618,18 @@ public class MainActivity extends BaseActivity {
             MQService.LocalBinder binder = (MQService.LocalBinder) service;
             mqService = binder.getService();
             List<Device> devices = deviceDao.findAllDevice();
-            for (Device device : devices) {
-                String deviceMac = device.getDeviceOnlyMac();
-                String topicName = "qjjc/gateway/" + deviceMac + "server_to_server";
-                mqService.getData(topicName, 0x11);
-                mqService.addCountTimer(deviceMac);
+            if (mqService != null) {
+                mqService.subscribeAll(devices);
+                for (Device device : devices) {
+                    String deviceMac = device.getDeviceOnlyMac();
+                    mqService.addCountTimer(deviceMac);
+                    String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
+                    mqService.getData(topicName, 0x11);
+                    mqService.addCountTimer(deviceMac);
+                }
+                countTimer.start();
+
             }
-            countTimer.start();
         }
 
         @Override
@@ -649,6 +686,10 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (popupWindow2!=null && popupWindow2.isShowing()){
+            popupWindow2.dismiss();
+        }
+
         if (reveiver != null) {
             unregisterReceiver(reveiver);
         }

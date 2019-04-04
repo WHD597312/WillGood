@@ -16,6 +16,8 @@ import android.view.Window;
 import android.view.WindowManager;
 
 
+import com.peihou.willgood.service.MQService;
+import com.peihou.willgood.service.ServiceUtils;
 import com.peihou.willgood.util.LogUtil;
 import com.peihou.willgood.util.SharedPreferencesHelper;
 import com.peihou.willgood.util.ToastUtil;
@@ -63,6 +65,16 @@ public abstract class BaseActivity extends AppCompatActivity {
         super.onBackPressed();
         if (application!=null)
             application.removeActivity(this);
+    }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        boolean running= ServiceUtils.isServiceRunning(this,"com.peihou.willgood.service.MQService");
+        if (!running){
+            Intent intent=new Intent(this, MQService.class);
+            intent.putExtra("restart",1);
+            startService(intent);
+        }
     }
 
     private void initWindows() {

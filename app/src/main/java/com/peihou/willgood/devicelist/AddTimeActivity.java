@@ -137,6 +137,10 @@ public class AddTimeActivity extends BaseActivity {
         if (month < 10) {
             ss = "0" + month;
         }
+        String day1=""+day;
+        if (day<10){
+            day1="0"+day;
+        }
         String sss = "" + min;
         String ss1=hour+"";
         if (hour<10){
@@ -146,7 +150,7 @@ public class AddTimeActivity extends BaseActivity {
         if (min < 10) {
             sss = "0" + min;
         }
-        time = year + "-" + ss + "-" + day + " " + ss1 + ":" + sss;
+        time = year + "-" + ss + "-" + day1 + " " + ss1 + ":" + sss;
 
         tv_timer_value.setText(time);
         tv_1.setTag(0);
@@ -374,7 +378,7 @@ public class AddTimeActivity extends BaseActivity {
         public void onServiceConnected(ComponentName name, IBinder service) {
             MQService.LocalBinder binder = (MQService.LocalBinder) service;
             mqService = binder.getService();
-            mqService.getData(topicName, 0x11);
+//            mqService.getData(topicName, 0x11);
 
         }
 
@@ -417,6 +421,10 @@ public class AddTimeActivity extends BaseActivity {
             if (month < 10) {
                 ss = "0" + month;
             }
+            String day1=""+day;
+            if (day<10){
+                day1="0"+day;
+            }
             String sss = "" + min;
             String ss1=hour+"";
 
@@ -427,7 +435,7 @@ public class AddTimeActivity extends BaseActivity {
             if (min < 10) {
                 sss = "0" + min;
             }
-            time = year + "-" + ss + "-" + day + " " + ss1 + ":" + sss;
+            time = year + "-" + ss + "-" + day1 + " " + ss1 + ":" + sss;
 
             tv_timer_value.setText(time);
         }else {
@@ -523,6 +531,10 @@ public class AddTimeActivity extends BaseActivity {
             if (month < 10) {
                 ss = "0" + month;
             }
+            String day1=""+day;
+            if (day<10){
+                day1="0"+day;
+            }
             String sss = "" + min;
             String ss1=hour+"";
 
@@ -533,7 +545,7 @@ public class AddTimeActivity extends BaseActivity {
             if (min < 10) {
                 sss = "0" + min;
             }
-            time = year + "-" + ss + "-" + day + " " + ss1 + ":" + sss;
+            time = year + "-" + ss + "-" + day1 + " " + ss1 + ":" + sss;
 
             tv_timer_value.setText(time);
         }else {
@@ -549,8 +561,6 @@ public class AddTimeActivity extends BaseActivity {
             time=ss+":"+sss;
             tv_timer_value.setText(time);
         }
-
-
 
         backgroundAlpha(0.6f);
         popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
@@ -582,6 +592,10 @@ public class AddTimeActivity extends BaseActivity {
                             if (month < 10) {
                                 ss = "0" + month;
                             }
+                            String day1=""+day;
+                            if (day<10){
+                                day1="0"+day;
+                            }
                             String sss = "" + min;
                             String ss1=hour+"";
 
@@ -592,7 +606,7 @@ public class AddTimeActivity extends BaseActivity {
                             if (min < 10) {
                                 sss = "0" + min;
                             }
-                            time = year + "-" + ss + "-" + day + " " + ss1 + ":" + sss;
+                            time = year + "-" + ss + "-" + day1 + " " + ss1 + ":" + sss;
 
                             tv_timer_value.setText(time);
                         } else {

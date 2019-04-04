@@ -21,22 +21,22 @@ public class DaoMaster extends AbstractDaoMaster {
 
     /** Creates underlying database table using DAOs. */
     public static void createAllTables(Database db, boolean ifNotExists) {
-        DeviceDao.createTable(db, ifNotExists);
-        TimerTaskDao.createTable(db, ifNotExists);
-        Line2Dao.createTable(db, ifNotExists);
         AlermDao.createTable(db, ifNotExists);
+        DeviceDao.createTable(db, ifNotExists);
+        Line2Dao.createTable(db, ifNotExists);
         LinkedDao.createTable(db, ifNotExists);
         LinkedTypeDao.createTable(db, ifNotExists);
+        TimerTaskDao.createTable(db, ifNotExists);
     }
 
     /** Drops underlying database table using DAOs. */
     public static void dropAllTables(Database db, boolean ifExists) {
-        DeviceDao.dropTable(db, ifExists);
-        TimerTaskDao.dropTable(db, ifExists);
-        Line2Dao.dropTable(db, ifExists);
         AlermDao.dropTable(db, ifExists);
+        DeviceDao.dropTable(db, ifExists);
+        Line2Dao.dropTable(db, ifExists);
         LinkedDao.dropTable(db, ifExists);
         LinkedTypeDao.dropTable(db, ifExists);
+        TimerTaskDao.dropTable(db, ifExists);
     }
 
     /**
@@ -55,12 +55,12 @@ public class DaoMaster extends AbstractDaoMaster {
 
     public DaoMaster(Database db) {
         super(db, SCHEMA_VERSION);
-        registerDaoClass(DeviceDao.class);
-        registerDaoClass(TimerTaskDao.class);
-        registerDaoClass(Line2Dao.class);
         registerDaoClass(AlermDao.class);
+        registerDaoClass(DeviceDao.class);
+        registerDaoClass(Line2Dao.class);
         registerDaoClass(LinkedDao.class);
         registerDaoClass(LinkedTypeDao.class);
+        registerDaoClass(TimerTaskDao.class);
     }
 
     public DaoSession newSession() {
