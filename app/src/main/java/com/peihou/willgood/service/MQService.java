@@ -1348,12 +1348,12 @@ public class MQService extends Service {
                             type = 7;
                         }
                         Alerm alerm = deviceAlermDao.findDeviceAlerm(macAddress, type);
-                        if (alerm.getDeviceAlarmFlag() == 1) {
-                            Message msg = handler.obtainMessage();
-                            msg.what = 10003;
-                            msg.arg1 = type;
-                            handler.sendMessage(msg);
-                        }
+//                        if (alerm.getDeviceAlarmFlag() == 1) {
+//                            Message msg = handler.obtainMessage();
+//                            msg.what = 10003;
+//                            msg.arg1 = type;
+//                            handler.sendMessage(msg);
+//                        }
 //                        if (alerm.getDeviceAlarmBroadcast() == 1 || alerm.getDeviceAlarmBroadcast() == 2) {
 //                            String cotent = alerm.getContent();
 //                            Message msg = handler.obtainMessage();
@@ -1364,12 +1364,12 @@ public class MQService extends Service {
 //                        }
 //                        int line = data[5];
                     }
-                    if (MainActivity.running) {
+                    if (MainActivity.running && funCode==0x11) {
                         Intent intent = new Intent("MainActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("device", device);
                         sendBroadcast(intent);
-                    } else if (TimerTaskActivity.running) {
+                    } else if (TimerTaskActivity.running && funCode==0x22) {
                         Intent intent = new Intent("TimerTaskActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("timerTaskFlag", timerTaskFlag);
@@ -1378,7 +1378,7 @@ public class MQService extends Service {
                         intent.putExtra("operate", operateState);
                         intent.putExtra("online", true);
                         sendBroadcast(intent);
-                    } else if (LinkedControlActivity.running) {
+                    } else if (LinkedControlActivity.running && funCode==0x33) {
                         Intent intent = new Intent("LinkedControlActivity");
                         intent.putExtra("macAddress", macAddress);
                         if (linkedTypes != null && linkedTypes.size() == 5) {
@@ -1387,18 +1387,18 @@ public class MQService extends Service {
                         }
                         intent.putExtra("online", true);
                         sendBroadcast(intent);
-                    } else if (LinkItemActivity.running) {
+                    } else if (LinkItemActivity.running && (funCode==0x34 || funCode==0x35 || funCode==0x36 || funCode==0x37 || funCode==0x38)) {
                         Intent intent = new Intent("LinkItemActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("linkType", linkType);
-                        if (funCode == 0x39) {
-                            intent.putExtra("moniType", moniType);
-                            intent.putExtra("linkTypeNum", linkTypeNum);
-                        }
+//                        if (funCode == 0x39) {
+//                            intent.putExtra("moniType", moniType);
+//                            intent.putExtra("linkTypeNum", linkTypeNum);
+//                        }
                         intent.putExtra("operate", operateState);
                         intent.putExtra("online", true);
                         sendBroadcast(intent);
-                    } else if (SwichCheckActivity.running) {
+                    } else if (SwichCheckActivity.running && funCode==0x55) {
                         Intent intent = new Intent("SwichCheckActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("switchState1", switchState1);
@@ -1411,13 +1411,13 @@ public class MQService extends Service {
                         intent.putExtra("switchState8", switchState8);
                         intent.putExtra("online", true);
                         sendBroadcast(intent);
-                    }else if (LocationActivity.running){
+                    }else if (LocationActivity.running && funCode==0x77){
                         Intent intent = new Intent("LocationActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("latitude", latitude);
                         intent.putExtra("longitude",longitude);
                         sendBroadcast(intent);
-                    }else if (AlermActivity.running){
+                    }else if (AlermActivity.running && funCode==0x66){
                         Intent intent = new Intent("AlermActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("alerms", (Serializable) alerms);
