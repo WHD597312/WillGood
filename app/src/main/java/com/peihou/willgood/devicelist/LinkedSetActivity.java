@@ -153,20 +153,20 @@ public class LinkedSetActivity extends BaseActivity {
                     String name = line2.getName();
                     if (deviceLineNum < 8) {
                         if (line2.isOnClick()) {
-                            pre[7 - deviceLineNum] = 1;
+                            pre[deviceLineNum] = 1;
                         } else {
-                            pre[7 - deviceLineNum] = 0;
+                            pre[deviceLineNum] = 0;
                         }
                     } else if (deviceLineNum >= 8) {
                         if (line2.isOnClick()) {
-                            last[7 - (deviceLineNum - 8)] = 1;
+                            last[(deviceLineNum - 8)] = 1;
                         } else {
-                            last[7 - (deviceLineNum - 8)] = 0;
+                            last[(deviceLineNum - 8)] = 0;
                         }
                     }
                 }
-               int  preLines = TenTwoUtil.changeToTen(pre);
-               int  lastLines = TenTwoUtil.changeToTen(last);
+               int  preLines = TenTwoUtil.changeToTen2(pre);
+               int  lastLines = TenTwoUtil.changeToTen2(last);
                 if (preLines+lastLines == 0) {
                     ToastUtil.showShort(this, "请选择线路");
                     break;

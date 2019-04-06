@@ -45,6 +45,7 @@ import com.peihou.willgood.login.LoginActivity;
 import com.peihou.willgood.pojo.Device;
 import com.peihou.willgood.receiver.MQTTMessageReveiver;
 import com.peihou.willgood.service.MQService;
+import com.peihou.willgood.service.ServiceUtils;
 import com.peihou.willgood.util.NoFastClickUtils;
 import com.peihou.willgood.util.ToastUtil;
 
@@ -383,6 +384,12 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
     @Override
     protected void onStart() {
         super.onStart();
+        boolean running2= ServiceUtils.isServiceRunning(this,"com.peihou.willgood.service.MQService");
+        if (!running2){
+            Intent intent=new Intent(this, MQService.class);
+            intent.putExtra("restart",1);
+            startService(intent);
+        }
         running = true;
     }
 
