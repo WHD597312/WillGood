@@ -302,8 +302,6 @@ public class AddTimeActivity extends BaseActivity {
                 setOnlyOne();
 
                 tv_timer_set.setText("设定时间");
-                String timer = year + "-" + month + "-" + day + "  " + hour + ":" + min;
-                tv_timer_value.setText(timer);
                 linear_week.setVisibility(View.GONE);
                 tv_repeat.setVisibility(View.GONE);
                 break;
@@ -314,8 +312,6 @@ public class AddTimeActivity extends BaseActivity {
                 only = 1;
                 setOnlyOne();
                 tv_timer_set.setText("循环时间");
-                String timer2 = hour + ":" + min;
-                tv_timer_value.setText(timer2);
                 linear_week.setVisibility(View.VISIBLE);
                 tv_repeat.setVisibility(View.VISIBLE);
                 break;

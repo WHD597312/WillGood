@@ -89,9 +89,12 @@ public class LinkItemActivity extends BaseActivity {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.img_back:
-                if (!list.isEmpty()){
-                    List<Linked> linkeds=updateLinkeds(list);
-                    mqService.updateLinkeds(linkeds);
+                if (mqService!=null){
+                    List<Linked> list=mqService.getLinkeds(deviceMac,type);
+                    if (!list.isEmpty()){
+                        List<Linked> linkeds=updateLinkeds(list);
+                        mqService.updateLinkeds(linkeds);
+                    }
                 }
                 finish();
                 break;
@@ -140,7 +143,7 @@ public class LinkItemActivity extends BaseActivity {
         topicName="qjjc/gateway/"+deviceMac+"/server_to_client";
 //        topicName = "qjjc/gateway/" + deviceMac + "/client_to_server";
             deviceLinkDao = new DeviceLinkDaoImpl(getApplicationContext());
-            list = deviceLinkDao.findLinkeds(deviceMac, type);
+//            list = deviceLinkDao.findLinkeds(deviceMac, type);
             adapter = new MyAdapter(this, list);
             list_linked.setLayoutManager(new LinearLayoutManager(this));
             list_linked.setAdapter(adapter);
@@ -170,9 +173,12 @@ public class LinkItemActivity extends BaseActivity {
 
     @Override
     public void onBackPressed() {
-        if (!list.isEmpty()){
-            List<Linked> linkeds=updateLinkeds(list);
-            mqService.updateLinkeds(linkeds);
+        if (mqService!=null){
+            List<Linked> list=mqService.getLinkeds(deviceMac,type);
+            if (!list.isEmpty()){
+                List<Linked> linkeds=updateLinkeds(list);
+                mqService.updateLinkeds(linkeds);
+            }
         }
         super.onBackPressed();
     }
@@ -300,7 +306,7 @@ public class LinkItemActivity extends BaseActivity {
 
                     if (mqService != null) {
                         dialog.dismiss();
-                        boolean success = mqService.sendLinkedSet(topicName, linked);
+                        boolean success = mqService.sendLinkedSet(topicName, linked,0x02);
                         returnData = 1;
                     }
 
@@ -419,7 +425,7 @@ public class LinkItemActivity extends BaseActivity {
                         linked.setState(1);
                     }
                     if (mqService != null) {
-                        boolean success = mqService.sendLinkedSet(topicName, linked);
+                        boolean success = mqService.sendLinkedSet(topicName, linked,0x02);
                         returnData = 1;
                         countTimer.start();
                     }
@@ -467,7 +473,7 @@ public class LinkItemActivity extends BaseActivity {
                 Linked linked = (Linked) data.getSerializableExtra("linked");
                 if (linked != null) {
                     Log.i("topicName","-->"+topicName);
-                    mqService.sendLinkedSet(topicName, linked);
+                    mqService.sendLinkedSet(topicName, linked,0x01);
                     add = 1;
                     countTimer.start();
                 }

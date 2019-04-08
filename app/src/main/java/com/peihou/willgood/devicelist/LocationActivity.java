@@ -190,6 +190,11 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
             case R.id.img_set:
                 Intent intent=new Intent(this,LocationSetActivity.class);
                 intent.putExtra("deviceMac",deviceMac);
+                if (mqService!=null){
+                    int location=mqService.getDeviceLocationFre(deviceMac);
+                    intent.putExtra("location",location);
+                }
+
                 startActivity(intent);
 
         }

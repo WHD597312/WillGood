@@ -567,10 +567,14 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
 
                     if (isOpen2) {
                         device.setPrelineswitch(255);
-                        device.setLastlines(255);
+                        device.setLastlineswitch(255);
+                        device.setPrelinesjog(0);
+                        device.setLastlinesjog(0);
                     } else {
                         device.setPrelineswitch(0);
-                        device.setLastlines(0);
+                        device.setLastlineswitch(0);
+                        device.setPrelinesjog(0);
+                        device.setLastlinesjog(0);
                     }
                     if (mqService != null) {
                         mqService.sendBasic(topicName, device);

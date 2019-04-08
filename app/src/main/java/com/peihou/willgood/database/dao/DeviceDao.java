@@ -81,6 +81,7 @@ public class DeviceDao extends AbstractDao<Device, Long> {
         public final static Property UserId = new Property(54, int.class, "userId", false, "USER_ID");
         public final static Property System = new Property(55, int.class, "system", false, "SYSTEM");
         public final static Property Vlice2 = new Property(56, int.class, "vlice2", false, "VLICE2");
+        public final static Property Location = new Property(57, int.class, "location", false, "LOCATION");
     }
 
 
@@ -152,7 +153,8 @@ public class DeviceDao extends AbstractDao<Device, Long> {
                 "\"RE485\" TEXT," + // 53: re485
                 "\"USER_ID\" INTEGER NOT NULL ," + // 54: userId
                 "\"SYSTEM\" INTEGER NOT NULL ," + // 55: system
-                "\"VLICE2\" INTEGER NOT NULL );"); // 56: vlice2
+                "\"VLICE2\" INTEGER NOT NULL ," + // 56: vlice2
+                "\"LOCATION\" INTEGER NOT NULL );"); // 57: location
     }
 
     /** Drops the underlying database table. */
@@ -253,6 +255,7 @@ public class DeviceDao extends AbstractDao<Device, Long> {
         stmt.bindLong(55, entity.getUserId());
         stmt.bindLong(56, entity.getSystem());
         stmt.bindLong(57, entity.getVlice2());
+        stmt.bindLong(58, entity.getLocation());
     }
 
     @Override
@@ -347,6 +350,7 @@ public class DeviceDao extends AbstractDao<Device, Long> {
         stmt.bindLong(55, entity.getUserId());
         stmt.bindLong(56, entity.getSystem());
         stmt.bindLong(57, entity.getVlice2());
+        stmt.bindLong(58, entity.getLocation());
     }
 
     @Override
@@ -413,7 +417,8 @@ public class DeviceDao extends AbstractDao<Device, Long> {
             cursor.isNull(offset + 53) ? null : cursor.getString(offset + 53), // re485
             cursor.getInt(offset + 54), // userId
             cursor.getInt(offset + 55), // system
-            cursor.getInt(offset + 56) // vlice2
+            cursor.getInt(offset + 56), // vlice2
+            cursor.getInt(offset + 57) // location
         );
         return entity;
     }
@@ -477,6 +482,7 @@ public class DeviceDao extends AbstractDao<Device, Long> {
         entity.setUserId(cursor.getInt(offset + 54));
         entity.setSystem(cursor.getInt(offset + 55));
         entity.setVlice2(cursor.getInt(offset + 56));
+        entity.setLocation(cursor.getInt(offset + 57));
      }
     
     @Override

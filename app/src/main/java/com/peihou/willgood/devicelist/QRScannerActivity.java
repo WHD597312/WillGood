@@ -41,7 +41,6 @@ import com.peihou.willgood.base.MyApplication;
 import com.peihou.willgood.database.dao.impl.DeviceDaoImpl;
 import com.peihou.willgood.database.dao.impl.DeviceLineDaoImpl;
 import com.peihou.willgood.pojo.Device;
-import com.peihou.willgood.pojo.Line;
 import com.peihou.willgood.pojo.Line2;
 import com.peihou.willgood.util.ToastUtil;
 import com.peihou.willgood.util.camera.CameraManager;

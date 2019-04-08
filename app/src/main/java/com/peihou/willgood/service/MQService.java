@@ -473,21 +473,15 @@ public class MQService extends Service {
             int[] data = new int[bytes.length];
 
             int sum = 0;
-            int sum2 = 0;
             for (int i = 0; i < data.length; i++) {
                 int k = bytes[i];
                 data[i] = k < 0 ? k + 256 : k;
                 if (i < data.length - 2) {
                     sum += data[i];
                 }
-                if (i >= 4 && i < data.length - 2) {
-                    sum2 += data[i];
-                }
             }
 
-            if (sum2 == 0) {
-                return null;
-            }
+
             int check = sum % 256;
             if (check != data[data.length - 2]) {
                 return null;
@@ -1269,12 +1263,18 @@ public class MQService extends Service {
                             }
                         });
                     } else if (funCode == 0x77) {
+                        int location=data[4];
                         int symbol = data[6];
                         int[] x = TenTwoUtil.changeToTwo(symbol);
                         int x1 = x[0];
                         int x2 = x[1];
                         int x3 = x[2];
                         int x4 = x[3];
+                        if (location==10 || location==20 || location==30 || location==60 || location==120){
+                            device.setLocation(location);
+                            deviceDao.update(device);
+                        }
+
                         String s = "";
                         if (x1 == 1 && x2 == 0 && x3 == 1 && x4 == 0) {
 
@@ -1894,6 +1894,17 @@ public class MQService extends Service {
     }
 
     /**
+     * 获取设备的定位频率
+     * @param deviceMac
+     * @return
+     */
+    public int getDeviceLocationFre(String deviceMac){
+        Device device=deviceDao.findDeviceByMac(deviceMac);
+        int location=device.getLocation();
+        return location;
+    }
+
+    /**
      * @param topicName 发送主题
      * @param funCode   功能码 0x11是基本功能，0x22定时设置，0x33联动设置，0x44工作模式具体设置，0x55开关量检测
      *                  0x66报警设置，0x77地图定位上传，0x88模拟量检测
@@ -1986,7 +1997,7 @@ public class MQService extends Service {
      * @param topicName
      * @param timerTask
      */
-    public boolean sendTimerTask(String topicName, TimerTask timerTask) {
+    public boolean sendTimerTask(String topicName, TimerTask timerTask,int operate) {
         boolean success = false;
         try {
             int mcuVersion = timerTask.getMcuVersion();
@@ -2020,6 +2031,7 @@ public class MQService extends Service {
             data[13] = (byte) lastlines;
             data[14] = (byte) controlState;
             data[15] = (byte) state;
+            data[16]= (byte) operate;
             int sum = 0;
             for (int i : data) {
                 sum += i;
@@ -2038,34 +2050,6 @@ public class MQService extends Service {
         return false;
     }
 
-    class LinkedAsync extends BaseWeakAsyncTask<List<Linked>, Void, Void, MQService> {
-
-        public LinkedAsync(MQService mqService) {
-            super(mqService);
-        }
-
-        @Override
-        protected Void doInBackground(MQService mqService, List<Linked>... lists) {
-            try {
-                List<Linked> linkeds = lists[0];
-                Linked linked = linkeds.get(0);
-                String deviceMac = linked.getDeviceMac();
-                String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
-                for (Linked linked2 : linkeds) {
-                    sendLinkedSet(topicName, linked2);
-                    Thread.sleep(500);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(MQService mqService, Void aVoid) {
-
-        }
-    }
 
     /**
      * 发送联动控制
@@ -2074,7 +2058,7 @@ public class MQService extends Service {
      * @param linked
      * @return
      */
-    public boolean sendLinkedSet(String topicName, Linked linked) {
+    public boolean sendLinkedSet(String topicName, Linked linked,int operate) {
         boolean success = false;
         try {
             int type = linked.getType();
@@ -2138,6 +2122,7 @@ public class MQService extends Service {
             if (type == 2) {
                 bytes[9] = (byte) switchLine;
             }
+            bytes[10]= (byte) operate;
             int sum = 0;
             for (int i = 0; i < bytes.length; i++) {
                 sum += bytes[i];

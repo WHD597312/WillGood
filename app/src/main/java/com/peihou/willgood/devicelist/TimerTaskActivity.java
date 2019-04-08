@@ -79,7 +79,7 @@ public class TimerTaskActivity extends BaseActivity {
         deviceLineDao=new DeviceLineDaoImpl(getApplicationContext());
         topicName="qjjc/gateway/"+deviceMac+"/server_to_client";
 //        topicName = "qjjc/gateway/" + deviceMac + "/client_to_server";
-        timerTasks=timerTaskDao.findDeviceTimeTask(deviceMac);
+//        timerTasks=timerTaskDao.findDeviceTimeTask(deviceMac);
         Intent service=new Intent(this,MQService.class);
         bind=bindService(service,connection,Context.BIND_AUTO_CREATE);
 
@@ -100,6 +100,7 @@ public class TimerTaskActivity extends BaseActivity {
         switch (view.getId()){
             case R.id.img_back:
                 if (mqService!=null){
+                    List<TimerTask> timerTasks=mqService.getTimerTask(deviceMac);
                     if (!timerTasks.isEmpty()){
                         List<TimerTask> timerTasks2=updateTimerTasks(timerTasks);
                         mqService.updateTimerTasks(timerTasks2);
@@ -132,6 +133,7 @@ public class TimerTaskActivity extends BaseActivity {
     @Override
     public void onBackPressed() {
         if (mqService!=null){
+            List<TimerTask> timerTasks=mqService.getTimerTask(deviceMac);
             if (!timerTasks.isEmpty()){
                 List<TimerTask> timerTasks2=updateTimerTasks(timerTasks);
                 mqService.updateTimerTasks(timerTasks2);
@@ -174,7 +176,7 @@ public class TimerTaskActivity extends BaseActivity {
                 if (mqService!=null){
                     TimerTask timerTask=timerTasks.get(position);
                     timerTask.setState(2);
-                    boolean success=mqService.sendTimerTask(topicName,timerTask);
+                    boolean success=mqService.sendTimerTask(topicName,timerTask,0x02);
                     returnData=1;
                 }
                 dialog.dismiss();
@@ -278,7 +280,7 @@ public class TimerTaskActivity extends BaseActivity {
             if (mqService!=null){
                 TimerTask timerTask= (TimerTask) data.getSerializableExtra("timerTask");
                 if (timerTask!=null){
-                    mqService.sendTimerTask(topicName,timerTask);
+                    mqService.sendTimerTask(topicName,timerTask,0x01);
                     returnData=1;
                     countTimer.start();
                 }
@@ -315,13 +317,27 @@ public class TimerTaskActivity extends BaseActivity {
                 String name=timerTask.getName();
                 int hour=timerTask.getHour();
                 int min=timerTask.getMin();
+                String hour2=""+hour;
+                String min2=""+min;
+                if (hour<10){
+                    hour2="0"+hour;
+                }
+
+                if (min < 10) {
+                    min2 = "0" + min;
+                }
                 String switchState="";
                 if (controlState==1){
                     switchState="开启";
                 }else {
                     switchState="关闭";
                 }
-                holder.tv_name.setText(switchState+" "+name);
+                String s2=switchState+" "+name;
+
+//                SpannableStringBuilder style=new SpannableStringBuilder(s2);
+//                style.setSpan(new ForegroundColorSpan(Color.parseColor("#09c585")),0,2,Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                holder.tv_name.setText(s2);
                 Log.i("TimerTask","-->"+isOpen);
                 if (state==1){
                     holder.img_open.setImageResource(R.mipmap.img_open);
@@ -334,12 +350,22 @@ public class TimerTaskActivity extends BaseActivity {
                     int year=timerTask.getYear();
                     int month=timerTask.getMonth();
                     int day=timerTask.getDay();
-                    String time=year+"-"+month+"-"+day+" "+hour+":"+min;
+                    String month2=""+month;
+                    if (month < 10) {
+                        month2 = "0" + month;
+                    }
+                    String day1=""+day;
+                    if (day<10){
+                        day1="0"+day;
+                    }
+
+
+                    String time=year+"-"+month2+"-"+day1+" "+hour2+":"+min2;
                     holder.tv_timer.setText(time);
                     holder.tv_timers.setText("单次定时");
                     holder.tv_week.setText("");
                 }else if (choice==0x22){
-                    String time=hour+":"+min;
+                    String time=hour2+":"+min2;
                     holder.tv_timer.setText(time);
                     int week=timerTask.getWeek();
                     String mon="";
@@ -391,27 +417,22 @@ public class TimerTaskActivity extends BaseActivity {
                             }
                             return;
                         }
-                        returnData=1;
+
                         if (timerTask.getState()==1){
                             timerTask.setState(0);
                         }else {
                             timerTask.setState(1);
                         }
                         if (mqService!=null){
-                            boolean success=mqService.sendTimerTask(topicName,timerTask);
+                            boolean success=mqService.sendTimerTask(topicName,timerTask,0x02);
+                            returnData=1;
                             countTimer.start();
                         }
                     }
                 });
-                holder.rl_item.setOnLongClickListener(new View.OnLongClickListener() {
-                    @Override
-                    public boolean onLongClick(View v) {
-                        changeDialog(position);
-                        return false;
-                    }
-                });
 
             }
+
         }
 
         @Override

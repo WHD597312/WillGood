@@ -102,9 +102,9 @@ public class LinkedControlActivity extends BaseActivity {
             list.add(new LinkedType(deviceMac, 2, "开关量联动", 0, 0));
             list.add(new LinkedType(deviceMac, 3, "电流联动", 0, 0));
             list.add(new LinkedType(deviceMac, 4, "电压联动", 0, 0));
+//            list.add(new LinkedType(deviceMac,5,"模拟量联动",0,0));
             deviceLinkedTypeDao.insertLinkedTypes(list);
         }
-
 
 
         list_linked.setLayoutManager(new LinearLayoutManager(this));
@@ -145,7 +145,7 @@ public class LinkedControlActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (popupWindow2!=null && popupWindow2.isShowing()){
+        if (popupWindow2 != null && popupWindow2.isShowing()) {
             popupWindow2.dismiss();
         }
 
@@ -287,7 +287,6 @@ public class LinkedControlActivity extends BaseActivity {
                         }
                     }
 
-
                     int data = TenTwoUtil.changeToTen(x);
                     boolean success = mqService.sendLinkedSwitch(topicName, mcuVerion, data);
                     countTimer.start();
@@ -312,6 +311,7 @@ public class LinkedControlActivity extends BaseActivity {
             holder.itemView.findViewById(R.id.rl).setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+
                     Intent intent = new Intent(LinkedControlActivity.this, LinkItemActivity.class);
                     intent.putExtra("type", type);
                     intent.putExtra("deviceId", deviceId);
@@ -401,7 +401,7 @@ public class LinkedControlActivity extends BaseActivity {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        if (popupWindow2==null)
+        if (popupWindow2 == null)
             popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
