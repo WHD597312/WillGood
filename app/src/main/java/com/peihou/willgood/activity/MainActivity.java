@@ -109,7 +109,8 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
     ImageView imgSwitch2;
 
     DeviceDaoImpl deviceDao;
-
+    @BindView(R.id.tv_offline) TextView tv_offline;
+    @BindView(R.id.tv_offline2) TextView tv_offline2;
     @Override
     public void initParms(Bundle parms) {
     }
@@ -235,15 +236,15 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
 
     private void setMode() {
         if (type == 1) {
-
+            tv1.setBackgroundResource(R.drawable.bg_fill5_green);
+            tv2.setBackgroundResource(R.drawable.bg_fill5_green);
+            tv3.setBackgroundResource(R.drawable.bg_fill5_green);
+            tv4.setBackgroundResource(R.drawable.bg_fill5_green);
+            tv5.setBackgroundResource(R.drawable.bg_fill5_green);
+            tv6.setBackgroundResource(R.drawable.bg_fill5_green);
             if (device.getOnline()) {
+                tv_offline.setVisibility(View.GONE);
                 if (isOpen1) {
-                    tv1.setBackgroundResource(R.drawable.bg_fill5_green);
-                    tv2.setBackgroundResource(R.drawable.bg_fill5_green);
-                    tv3.setBackgroundResource(R.drawable.bg_fill5_green);
-                    tv4.setBackgroundResource(R.drawable.bg_fill5_green);
-                    tv5.setBackgroundResource(R.drawable.bg_fill5_green);
-                    tv6.setBackgroundResource(R.drawable.bg_fill5_green);
                     imgRefresh1.setImageResource(R.mipmap.ic_refresh1);
                     tvSwitch1.setTextColor(this.getResources().getColor(R.color.main_green));
                     tvTem.setTextColor(this.getResources().getColor(R.color.main_gray));
@@ -251,16 +252,10 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                     llSwitch1.setBackgroundResource(R.mipmap.bg_main_switch1);
                     imgSwitch1.setImageResource(R.mipmap.ic_main_close1);
                 } else {
-                    tv1.setBackgroundResource(R.drawable.bg_fill5_gray);
-                    tv2.setBackgroundResource(R.drawable.bg_fill5_gray);
-                    tv3.setBackgroundResource(R.drawable.bg_fill5_gray);
-                    tv4.setBackgroundResource(R.drawable.bg_fill5_gray);
-                    tv5.setBackgroundResource(R.drawable.bg_fill5_gray);
-                    tv6.setBackgroundResource(R.drawable.bg_fill5_gray);
                     imgRefresh1.setImageResource(R.mipmap.ic_refresh1);
                     imgRefresh2.setImageResource(R.mipmap.ic_refresh2);
-                    llSwitch1.setBackgroundResource(R.mipmap.bg_main_switch1);
-                    imgSwitch1.setImageResource(R.mipmap.ic_main_open1);
+                    llSwitch1.setBackgroundResource(R.mipmap.bg_main_switch2);
+                    imgSwitch1.setImageResource(R.mipmap.ic_main_open2);
                     tvSwitch1.setTextColor(this.getResources().getColor(R.color.main_gray));
                 }
                 double temp = device.getTemp();
@@ -272,9 +267,11 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
             } else {
                 imgSwitch1.setImageResource(R.mipmap.ic_main_open2);
                 llSwitch1.setBackgroundResource(R.mipmap.bg_main_switch2);
+                tv_offline.setVisibility(View.VISIBLE);
             }
         } else if (type == 2) {
             if (device.getOnline()) {
+                tv_offline2.setVisibility(View.GONE);
                 imgTem.setImageResource(R.mipmap.ic_tem2);
                 imgHum.setImageResource(R.mipmap.ic_hum2);
                 imgTem.setImageResource(R.mipmap.ic_tem2);
@@ -282,18 +279,24 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                 tvTem.setTextColor(this.getResources().getColor(R.color.main_black));
                 tvHum.setTextColor(this.getResources().getColor(R.color.main_black));
                 imgRefresh2.setImageResource(R.mipmap.ic_refresh1);
-                tvSwitch2.setTextColor(this.getResources().getColor(R.color.main_green));
-                llSwitch2.setBackgroundResource(R.mipmap.bg_main_switch1);
+
 
                 if (device.getPlMemory() == 1) {
                     tv7.setBackgroundResource(R.drawable.bg_fill5_green);
                 } else {
                     tv7.setBackgroundResource(R.drawable.bg_fill5_gray);
                 }
-                if (isOpen2)
+                if (isOpen2){
                     imgSwitch2.setImageResource(R.mipmap.ic_main_close1);
-                else
-                    imgSwitch2.setImageResource(R.mipmap.ic_main_open1);
+                    llSwitch2.setBackgroundResource(R.mipmap.bg_main_switch1);
+                    tvSwitch2.setTextColor(this.getResources().getColor(R.color.main_green));
+                }
+                else{
+                    imgSwitch2.setImageResource(R.mipmap.ic_main_open2);
+                    llSwitch2.setBackgroundResource(R.mipmap.bg_main_switch2);
+                    tvSwitch2.setTextColor(this.getResources().getColor(R.color.main_gray));
+
+                }
                 double temp = device.getTemp();
                 double hum = device.getHum();
                 String s = "" + String.format("%.1f", temp);
@@ -304,6 +307,8 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                 imgSwitch2.setImageResource(R.mipmap.ic_main_open2);
                 llSwitch2.setBackgroundResource(R.mipmap.bg_main_switch2);
                 tv7.setBackgroundResource(R.drawable.bg_fill5_gray);
+                tv_offline2.setVisibility(View.VISIBLE);
+
             }
         }
     }
@@ -532,10 +537,22 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
 
                     if (isOpen1) {
                         isOpen1 = false;
-                        setMode();
+                        device.setDeviceState(0);
+                        device.setPrelineswitch(0);
+                        device.setLastlineswitch(0);
+                        device.setPrelinesjog(0);
+                        device.setLastlinesjog(0);
+                        mqService.sendBasic(topicName,device);
+                        countTimer.start();
                     } else {
                         isOpen1 = true;
-                        setMode();
+                        device.setDeviceState(1);
+                        device.setPrelineswitch(128);
+                        device.setLastlineswitch(0);
+                        device.setPrelinesjog(0);
+                        device.setLastlinesjog(0);
+                        mqService.sendBasic(topicName,device);
+                        countTimer.start();
                     }
                 } else
                     ToastUtil.show(this, "请添加配电系统设备", 0);
@@ -564,14 +581,13 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                         ToastUtil.show(this, "设备已离线", 0);
                         break;
                     }
-
                     if (isOpen2) {
-                        device.setPrelineswitch(255);
-                        device.setLastlineswitch(255);
+                        device.setPrelineswitch(0);
+                        device.setLastlineswitch(0);
                         device.setPrelinesjog(0);
                         device.setLastlinesjog(0);
                     } else {
-                        device.setPrelineswitch(0);
+                        device.setPrelineswitch(128);
                         device.setLastlineswitch(0);
                         device.setPrelinesjog(0);
                         device.setLastlinesjog(0);
@@ -672,8 +688,16 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                     if (macAddress.equals(deviceMac)) {
                         Device device2 = (Device) intent.getSerializableExtra("device");
                         if (device2 != null) {
+                            if (type==1 && device2.getPrelineswitch()>=128){
+                                isOpen1=true;
+                            }else if (type==1 && device2.getPrelineswitch()<128){
+                                isOpen1=false;
+                            }else if (type==2 && device2.getPrelineswitch()>=128){
+                                isOpen2=true;
+                            }else if (type==2 && device2.getPrelineswitch()<128){
+                                isOpen2=false;
+                            }
                             device = device2;
-                            isOpen2 = !isOpen2;
                             setMode();
                         }
                     }

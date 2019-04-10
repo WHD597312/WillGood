@@ -12,7 +12,7 @@ MobSDK {
     SMSSDK {}
 }
 greendao {
-    schemaVersion 8
+    schemaVersion 9
     daoPackage 'com.peihou.willgood.database.dao'
     targetGenDir 'src/main/java'
 }

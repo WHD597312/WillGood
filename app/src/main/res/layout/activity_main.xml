@@ -186,7 +186,14 @@
                     android:layout_marginTop="@dimen/dp_8"
                     android:text="配电系统"
                     android:textColor="@color/main_gray"
-                    android:textSize="@dimen/sp_20" />
+                    android:textSize="@dimen/sp_15" />
+                <TextView
+                    android:id="@+id/tv_offline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="离线"
+                    android:visibility="gone"
+                    />
             </LinearLayout>
 
 
@@ -302,7 +309,15 @@
                 android:layout_marginTop="@dimen/dp_8"
                 android:text="控制系统"
                 android:textColor="@color/main_gray"
-                android:textSize="@dimen/sp_20" />
+                android:textSize="@dimen/sp_15" />
+            <TextView
+                android:id="@+id/tv_offline2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="离线"
+                android:visibility="gone"
+                />
+
         </LinearLayout>
 
         <RelativeLayout

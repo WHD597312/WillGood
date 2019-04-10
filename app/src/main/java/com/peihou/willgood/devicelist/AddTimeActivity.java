@@ -204,23 +204,20 @@ public class AddTimeActivity extends BaseActivity {
                     sb.setLength(0);
                     int[] preLines = new int[8];
                     int[] lastLines = new int[8];
-                    for (int i = 0; i < list.size(); i++) {
+                    for (int i = 0; i <list.size(); i++) {
                         Line2 line2 = list.get(i);
                         int deviceLineNum = line2.getDeviceLineNum() - 1;
-                        String name = line2.getName();
                         if (deviceLineNum < 8) {
                             if (line2.isOnClick()) {
                                 preLines[deviceLineNum] = 1;
-                                sb.append(name + ",");
                             } else {
                                 preLines[deviceLineNum] = 0;
                             }
                         } else if (deviceLineNum >= 8) {
                             if (line2.isOnClick()) {
-                                lastLines[deviceLineNum - 8] = 1;
-                                sb.append(name + ",");
+                                lastLines[(deviceLineNum - 8)] = 1;
                             } else {
-                                lastLines[deviceLineNum - 8] = 0;
+                                lastLines[(deviceLineNum - 8)] = 0;
                             }
                         }
                     }
@@ -236,23 +233,20 @@ public class AddTimeActivity extends BaseActivity {
                     sb.setLength(0);
                     int[] preLines = new int[8];
                     int[] lastLines = new int[8];
-                    for (int i = 0; i < list.size(); i++) {
+                    for (int i = 0; i <list.size(); i++) {
                         Line2 line2 = list.get(i);
                         int deviceLineNum = line2.getDeviceLineNum() - 1;
-                        String name = line2.getName();
                         if (deviceLineNum < 8) {
                             if (line2.isOnClick()) {
                                 preLines[deviceLineNum] = 1;
-                                sb.append(name + ",");
                             } else {
                                 preLines[deviceLineNum] = 0;
                             }
                         } else if (deviceLineNum >= 8) {
                             if (line2.isOnClick()) {
-                                lastLines[deviceLineNum - 8] = 1;
-                                sb.append(name + ",");
+                                lastLines[(deviceLineNum - 8)] = 1;
                             } else {
-                                lastLines[deviceLineNum - 8] = 0;
+                                lastLines[(deviceLineNum - 8)] = 0;
                             }
                         }
                     }

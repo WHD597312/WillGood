@@ -144,11 +144,9 @@ public class LinkedSetActivity extends BaseActivity {
                 break;
             case R.id.img_ensure:
 
-
                 for (int i = 0; i < lines.size(); i++) {
                     Line2 line2 = lines.get(i);
                     int deviceLineNum = line2.getDeviceLineNum() - 1;
-                    String name = line2.getName();
                     if (deviceLineNum < 8) {
                         if (line2.isOnClick()) {
                             pre[deviceLineNum] = 1;

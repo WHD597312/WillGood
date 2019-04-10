@@ -442,7 +442,15 @@ public class MQService extends Service {
     public List<Linked> getLinkeds(String deviceMac, int type) {
         return deviceLinkDao.findLinkeds(deviceMac, type);
     }
-
+    int[] alermData=new int[17];
+    public int[] getAlermData(){
+        return alermData;
+    }
+    public void initAlarmData(){
+        for (int i = 0; i <alermData.length ; i++) {
+            alermData[i]=0;
+        }
+    }
     public void updateDevice(Device device) {
         deviceDao.update(device);
     }
@@ -1199,7 +1207,9 @@ public class MQService extends Service {
                         int powerState = data[19];
                         int switchState = data[20];
                         int[] x = TenTwoUtil.changeToTwo(type);
-
+                        for (int i = 4; i <data.length-8; i++) {
+                            alermData[i-4]=data[i];
+                        }
                         Alerm alerm = deviceAlermDao.findDeviceAlerm(macAddress, 0);//来电报警
                         Alerm alerm2 = deviceAlermDao.findDeviceAlerm(macAddress, 1);//断电报警
                         Alerm alerm3 = deviceAlermDao.findDeviceAlerm(macAddress, 2);//温度报警

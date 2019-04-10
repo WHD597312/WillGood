@@ -100,50 +100,19 @@ public class AlermActivity extends BaseActivity {
         list = deviceAlermDao.findDeviceAlerms(deviceMac);
         if (list.size()!=8){
             deviceAlermDao.deleteDeviceAlerms(deviceMac);
-            list.add(new Alerm("来电报警",1,false,deviceMac));
-            list.add(new Alerm("断电报警",2,false,deviceMac));
-            list.add(new Alerm("温度报警",3,false,deviceMac));
-            list.add(new Alerm("湿度报警",4,false,deviceMac));
-            list.add(new Alerm("电压报警",5,false,deviceMac));
-            list.add(new Alerm("电流报警",6,false,deviceMac));
-            list.add(new Alerm("功率报警",7,false,deviceMac));
-            list.add(new Alerm("开关量报警",8,false,deviceMac));
+            list.add(new Alerm("来电报警",0,false,deviceMac));
+            list.add(new Alerm("断电报警",1,false,deviceMac));
+            list.add(new Alerm("温度报警",2,false,deviceMac));
+            list.add(new Alerm("湿度报警",3,false,deviceMac));
+            list.add(new Alerm("电压报警",4,false,deviceMac));
+            list.add(new Alerm("电流报警",5,false,deviceMac));
+            list.add(new Alerm("功率报警",6,false,deviceMac));
+            list.add(new Alerm("开关量报警",7,false,deviceMac));
             deviceAlermDao.insertDeviceAlerms(list);
         }
-        int j = 1;
 
-        for (int i = 2; i < list.size() - 1; i++) {
-            Alerm alerm = list.get(i);
-            int state = alerm.getState();
-            x[i] = state;
-            once = alerm.getDeviceAlarmBroadcast();
-            notify = alerm.getDeviceAlarmFlag();
-            double value = alerm.getValue();
-            BigDecimal b = new BigDecimal(value);
-            value = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
-            int k = (int) (value * 10);
-            data[j] = k / 256;// 1 3 5,
-            data[++j] = k % 256;//2 4 6
-            int x = alerm.getState2();
-            if (x != 0x11 || x != 0x22)
-                data[++j] = 0x11;
-            else {
-                data[++j] = x;
-            }
-            j++;
-        }
-        if (list.size() == 8) {
-            Alerm alerm = list.get(7);
-            int state2 = alerm.getState2();
-            data[16] = state2;
-            Alerm alerm1 = list.get(0);
-            Alerm alerm2 = list.get(1);
-            int state = alerm1.getState();
-            int state3 = alerm2.getState();
-            x[0] = state;
-            x[1] = state3;
-        }
-        data[0] = TenTwoUtil.changeToTen(x);
+
+
 
         topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
 //        topicName = "qjjc/gateway/" + deviceMac + "/client_to_server";
@@ -302,6 +271,7 @@ public class AlermActivity extends BaseActivity {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.img_back:
+                mqService.initAlarmData();
                 finish();
                 break;
             case R.id.img_log:
@@ -331,6 +301,12 @@ public class AlermActivity extends BaseActivity {
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        mqService.initAlarmData();
+
+    }
 
     MessageReceiver receiver;
 
@@ -550,24 +526,15 @@ public class AlermActivity extends BaseActivity {
                             ToastUtil.showShort(AlermActivity.this, "设备已离线");
                             return;
                         }
+                        int[] data=mqService.getAlermData();
+                        int alermState=data[0];
+                        int states[]=TenTwoUtil.changeToTwo(alermState);
                         if (alerm.getState() == 1) {
-                            x[7 - (position - 4)] = 0;
-//                            alerm.setState(0);
+                            states[position-4]=0;
                         } else {
-//                            alerm.setState(1);
-                            x[7 - (position - 4)] = 1;
+                            states[position - 4] = 1;
                         }
-                        int k = TenTwoUtil.changeToTen(x);
-                        data[0] = k;
-
-                        double s = list.get(2).getValue();
-                        s += 50;
-                        BigDecimal b = new BigDecimal(s);
-                        s = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
-                        int alermValue = (int) (s) * 10;
-                        data[1] = alermValue / 256;
-                        data[2] = alermValue % 256;
-
+                        data[0] = TenTwoUtil.changeToTen2(states);
                         if (mqService != null) {
                             boolean success = mqService.sendAlerm(topicName, mcuVersion, data);
                             countTimer.start();
