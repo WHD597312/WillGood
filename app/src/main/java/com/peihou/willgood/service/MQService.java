@@ -99,9 +99,9 @@ import java.util.concurrent.TimeoutException;
 public class MQService extends Service {
 
     private String TAG = "MQService";
-    private String host = "tcp://47.98.131.11:1883";//mqtt连接服务端ip
-    private String userName = "admin";//mqtt连接用户名
-    private String passWord = "Xr7891122";//mqtt连接密码
+    private String host = "tcp://47.111.101.184:1883";//mqtt连接服务端ip
+    private String userName = "mosquitto";//mqtt连接用户名
+    private String passWord = "mosquitto";//mqtt连接密码
 
 
     private MqttClient client;//mqtt客户端
@@ -713,7 +713,7 @@ public class MQService extends Service {
                             Message msg = handler.obtainMessage();
                             CountTimer countTimer2=null;
                             for (CountTimer countTimer:countTimers){
-                                if (countTimer.getMacArress().equals(macAddress) && countTimer.getMillisUntilFinished()/1000==0){
+                                if (countTimer.getMacArress().equals(macAddress) && countTimer.getMillisUntilFinished()<=1){
                                     countTimer2=countTimer;
                                     break;
                                 }
@@ -1570,7 +1570,7 @@ public class MQService extends Service {
 
         @Override
         public void onTick(long millisUntilFinished) {
-            this.millisUntilFinished = millisUntilFinished;
+            this.millisUntilFinished = millisUntilFinished/1000;
             Log.e("millisUntilFinished", macArress+"->" + millisUntilFinished/1000);
         }
 
