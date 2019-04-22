@@ -30,7 +30,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class HttpUtils {
 
-    public static String ipAddress = "http://47.98.131.11:8095/qjjc/";
+    public static String ipAddress = "http://47.111.101.184:8095/qjjc/";
 
 
     static Interceptor REWRITE_CACHE_CONTROL_INTERCEPTOR = new Interceptor() {
@@ -65,7 +65,7 @@ public class HttpUtils {
         }
     };
 
-    public static String baseUrl = "http://47.98.131.11:8095/qjjc/";
+    public static String baseUrl = "http://47.111.101.184:8095/qjjc/";
 
     public static String requestPost(String url,Map<String, Object> params) {
         String result = null;

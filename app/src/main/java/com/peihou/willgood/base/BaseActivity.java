@@ -1,6 +1,7 @@
 package com.peihou.willgood.base;
 
 
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -71,6 +72,7 @@ public abstract class BaseActivity extends AppCompatActivity {
         super.onStart();
 
     }
+
 
     private void initWindows() {
         Window window = getWindow();
@@ -190,6 +192,9 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        //移除标记为id的通知 (只是针对当前Context下的所有Notification)
+        notificationManager.cancel(1);
     }
 
     @Override

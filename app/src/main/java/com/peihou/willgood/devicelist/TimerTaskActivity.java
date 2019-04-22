@@ -99,14 +99,6 @@ public class TimerTaskActivity extends BaseActivity {
     public void onClick(View view){
         switch (view.getId()){
             case R.id.img_back:
-                if (mqService!=null){
-                    List<TimerTask> timerTasks=mqService.getTimerTask(deviceMac);
-                    if (!timerTasks.isEmpty()){
-                        List<TimerTask> timerTasks2=updateTimerTasks(timerTasks);
-                        mqService.updateTimerTasks(timerTasks2);
-                    }
-                }
-
                 finish();
                 break;
             case R.id.img_add:
@@ -121,6 +113,26 @@ public class TimerTaskActivity extends BaseActivity {
     @Override
     protected void onStart() {
         super.onStart();
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mqService!=null && returnData==0){
+            timerTasks.clear();
+            adapter.notifyDataSetChanged();
+            List<TimerTask> timerTasks=mqService.getTimerTask(deviceMac);
+            if (!timerTasks.isEmpty()){
+                List<TimerTask> timerTasks2=updateTimerTasks(timerTasks);
+                mqService.updateTimerTasks(timerTasks2);
+            }
+            mqService.getData(topicName,0x22);
+            countTimer.start();
+//            List<TimerTask> timerTasks2=timerTaskDao.findDeviceTimeTask(deviceMac);
+//            timerTasks.addAll(timerTasks2);
+            returnData=0;
+        }
         running=true;
     }
 
@@ -128,18 +140,11 @@ public class TimerTaskActivity extends BaseActivity {
     protected void onStop() {
         super.onStop();
         running=false;
+        returnData=0;
     }
 
     @Override
     public void onBackPressed() {
-        if (mqService!=null){
-            List<TimerTask> timerTasks=mqService.getTimerTask(deviceMac);
-            if (!timerTasks.isEmpty()){
-                List<TimerTask> timerTasks2=updateTimerTasks(timerTasks);
-                mqService.updateTimerTasks(timerTasks2);
-            }
-        }
-
         super.onBackPressed();
     }
 
@@ -148,6 +153,7 @@ public class TimerTaskActivity extends BaseActivity {
             TimerTask timerTask=timerTasks.get(i);
             timerTask.setVisitity(0);
             timerTasks.set(i,timerTask);
+            timerTaskDao.update(timerTask);
         }
         return timerTasks;
     }
@@ -234,11 +240,11 @@ public class TimerTaskActivity extends BaseActivity {
                             if (returnData==1){
                                 if (mqService!=null){
                                     returnData=0;
-//                                    if (operate==1){
-//                                        mqService.starSpeech(deviceMac,"删除成功");
-//                                    }else {
-//                                        mqService.starSpeech(deviceMac,"设置成功");
-//                                    }
+                                    if (operate==0){
+                                        mqService.starSpeech(deviceMac,3);
+                                    }else if (operate==1){
+                                        mqService.starSpeech(deviceMac,7);
+                                    }
                                 }
                             }
 
@@ -261,6 +267,11 @@ public class TimerTaskActivity extends BaseActivity {
             MQService.LocalBinder binder= (MQService.LocalBinder) service;
             mqService=binder.getService();
             if (mqService!=null) {
+                List<TimerTask> timerTasks=mqService.getTimerTask(deviceMac);
+                if (!timerTasks.isEmpty()){
+                    List<TimerTask> timerTasks2=updateTimerTasks(timerTasks);
+                    mqService.updateTimerTasks(timerTasks2);
+                }
                 mqService.getData(topicName,0x22);
                 countTimer.start();
             }
@@ -285,6 +296,8 @@ public class TimerTaskActivity extends BaseActivity {
                     countTimer.start();
                 }
             }
+        }else if (resultCode==1002){
+            returnData=2;
         }
     }
 
@@ -381,22 +394,22 @@ public class TimerTaskActivity extends BaseActivity {
                         if (weeks[i]==1){
                             if (i==0){
                                 mon="一";
-                                s=s+mon+"        ";
+                                s=s+mon+"      ";
                             }else if (i==1){
                                 tue="二";
-                                s=s+tue+"        ";
+                                s=s+tue+"      ";
                             }else if (i==2){
                                 wen="三";
-                                s=s+wen+"        ";
+                                s=s+wen+"      ";
                             }else if (i==3){
                                 thr="四";
-                                s=s+thr+"        ";
+                                s=s+thr+"      ";
                             }else if (i==4){
                                 fri="五";
-                                s=s+fri+"        ";
+                                s=s+fri+"      ";
                             }else if (i==5){
                                 sat="六";
-                                s=s+sat+"        ";
+                                s=s+sat+"      ";
                             }else if (i==6){
                                 sun="日";
                                 s=s+sun;
@@ -428,6 +441,13 @@ public class TimerTaskActivity extends BaseActivity {
                             returnData=1;
                             countTimer.start();
                         }
+                    }
+                });
+                holder.rl_item.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View v) {
+                        changeDialog(position);
+                        return false;
                     }
                 });
 
@@ -475,8 +495,8 @@ public class TimerTaskActivity extends BaseActivity {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load=view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        if (popupWindow2==null)
-            popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+
+        popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
         popupWindow2.setFocusable(false);

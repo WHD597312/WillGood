@@ -22,4 +22,17 @@ public class Utils {
         }
         return sdf == null ? "NULL" : sdf.format(l);
     }
+    /**
+     * 判断一个字符串是否是数字类型的
+     * @param str
+     * @return
+     */
+    public static boolean isNumeric(String str){
+        try {
+            double num=Double.parseDouble(str);//把字符串强制转换为数字
+            return true;//如果是数字，返回True
+        } catch (Exception e) {
+            return false;//如果抛出异常，返回False
+        }
+    }
 }

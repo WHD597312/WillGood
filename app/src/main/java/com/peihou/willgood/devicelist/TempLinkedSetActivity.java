@@ -120,7 +120,7 @@ public class TempLinkedSetActivity extends BaseActivity {
 
         deviceLinkDao = new DeviceLinkDaoImpl(getApplicationContext());
 
-        lines = deviceLineDao.findDeviceOnlineLines(deviceId);
+        lines = deviceLineDao.findDeviceOnlineLines(deviceMac);
         Intent service = new Intent(this, MQService.class);
         bind = bindService(service, connection, Context.BIND_AUTO_CREATE);
 
@@ -171,6 +171,12 @@ public class TempLinkedSetActivity extends BaseActivity {
 
     }
 
+    @Override
+    public void onBackPressed() {
+        setResult(1002);
+        super.onBackPressed();
+    }
+
     int type = 0;//联动的类型
     int value = 0;//联动的触发条件
     long deviceId;//设备Id
@@ -187,6 +193,7 @@ public class TempLinkedSetActivity extends BaseActivity {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.img_back:
+                setResult(1002);
                 finish();
                 break;
             case R.id.img_ensure:

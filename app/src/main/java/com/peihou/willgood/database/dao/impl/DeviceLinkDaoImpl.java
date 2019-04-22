@@ -1,10 +1,8 @@
 package com.peihou.willgood.database.dao.impl;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
 
 import com.peihou.willgood.database.DBManager;
-import com.peihou.willgood.database.dao.DaoMaster;
 import com.peihou.willgood.database.dao.DaoSession;
 import com.peihou.willgood.database.dao.LinkedDao;
 import com.peihou.willgood.pojo.Linked;
@@ -15,15 +13,11 @@ import java.util.List;
 
 public class DeviceLinkDaoImpl {
     private Context context;
-    private SQLiteDatabase db;
-    private DaoMaster master;
     private LinkedDao linkedDao;
-    private DaoSession session;
     public DeviceLinkDaoImpl(Context context) {
         this.context = context;
-        db= DBManager.getInstance(context).getWritableDasebase();
-        master=new DaoMaster(db);
-        session=master.newSession();
+        DBManager dbManager=DBManager.getInstance(context);//获取数据库管理者单例对象
+        DaoSession session=dbManager.getDaoSession();//获取数据库会话对象
         linkedDao=session.getLinkedDao();
     }
     public void insert(Linked linked){

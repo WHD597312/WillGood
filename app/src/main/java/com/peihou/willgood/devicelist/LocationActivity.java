@@ -118,30 +118,30 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
         permissionGrantedSuccess();
         double latitude = 30.179158;
         double longtitude = 121.266949;
-        topicName = "qjjc/gateway/" + deviceMac + "server_to_server";
+        topicName="qjjc/gateway/"+deviceMac+"/server_to_client";
         receiver = new MessageReceiver();
         IntentFilter filter = new IntentFilter("LocationActivity");
         registerReceiver(receiver, filter);
         Intent service=new Intent(this,MQService.class);
         bind=bindService(service,connection,Context.BIND_AUTO_CREATE);
         //反地理编码，获取经纬度详细地址
-        BdMapUtils.reverseGeoParse(longtitude, latitude, new OnGetGeoCoderResultListener() {
-            @Override
-            public void onGetGeoCodeResult(GeoCodeResult geoCodeResult) {
-
-            }
-
-            @Override
-            public void onGetReverseGeoCodeResult(ReverseGeoCodeResult result) {
-                if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
-                    // 没有检测到结果
-
-                } else {////得到结果后处理方法
-                    String address = result.getAddress();
-                    Log.i("address", "-->" + address);
-                }
-            }
-        });
+//        BdMapUtils.reverseGeoParse(longtitude, latitude, new OnGetGeoCoderResultListener() {
+//            @Override
+//            public void onGetGeoCodeResult(GeoCodeResult geoCodeResult) {
+//
+//            }
+//
+//            @Override
+//            public void onGetReverseGeoCodeResult(ReverseGeoCodeResult result) {
+//                if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
+//                    // 没有检测到结果
+//
+//                } else {////得到结果后处理方法
+//                    String address = result.getAddress();
+//                    Log.i("address", "-->" + address);
+//                }
+//            }
+//        });
     }
 
 
@@ -207,9 +207,9 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        if (popupWindow2==null){
+
             popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
-        }
+
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
         popupWindow2.setFocusable(false);
@@ -800,9 +800,13 @@ public class LocationActivity extends BaseActivity implements EasyPermissions.Pe
 
 
 
+
                     MapStatusUpdate mapStatusUpdate2 = MapStatusUpdateFactory.newLatLng(new LatLng(latitude, longtitude));
                     mMap.setMapStatus(mapStatusUpdate2);
                     stopLocation();
+                    if (mqService!=null){
+                        mqService.getData(topicName,0x77);
+                    }
                 }
             }
         }

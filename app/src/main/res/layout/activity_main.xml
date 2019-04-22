@@ -20,7 +20,6 @@
         android:paddingBottom="@dimen/dp_15">
 
         <ImageView
-            android:visibility="gone"
             android:id="@+id/img_exit"
             android:layout_width="@dimen/dp_40"
             android:layout_height="@dimen/dp_40"

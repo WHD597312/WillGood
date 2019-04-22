@@ -119,7 +119,7 @@ public class AddTimeActivity extends BaseActivity {
 
 
         deviceLineDao = new DeviceLineDaoImpl(getApplicationContext());
-        list = deviceLineDao.findDeviceOnlineLines(deviceId);
+        list = deviceLineDao.findDeviceOnlineLines(deviceMac);
         timerTaskDao = new TimerTaskDaoImpl(getApplicationContext());
 
         topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
@@ -185,6 +185,12 @@ public class AddTimeActivity extends BaseActivity {
 
     }
 
+    @Override
+    public void onBackPressed() {
+        setResult(1002);
+        super.onBackPressed();
+    }
+
     int onClick = 0;
     int only = 0;//0为只有一次，1可以循环
     int open = 1;
@@ -194,6 +200,7 @@ public class AddTimeActivity extends BaseActivity {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.img_back:
+                setResult(1002);
                 finish();
                 break;
             case R.id.img_add:

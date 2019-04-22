@@ -9,19 +9,18 @@ import com.peihou.willgood.database.dao.DaoSession;
 import com.peihou.willgood.database.dao.LinkedTypeDao;
 import com.peihou.willgood.pojo.LinkedType;
 
+import org.greenrobot.greendao.identityscope.IdentityScopeType;
+
 import java.util.List;
 
 public class DeviceLinkedTypeDaoImpl {
     private Context context;
-    private SQLiteDatabase db;
-    private DaoMaster master;
     private LinkedTypeDao linkedTypeDao;
-    private DaoSession session;
+
     public DeviceLinkedTypeDaoImpl(Context context) {
         this.context = context;
-        db= DBManager.getInstance(context).getWritableDasebase();
-        master=new DaoMaster(db);
-        session=master.newSession();
+        DBManager dbManager=DBManager.getInstance(context);//获取数据库管理者单例对象
+        DaoSession session=dbManager.getDaoSession();//获取数据库会话对象
         linkedTypeDao=session.getLinkedTypeDao();
     }
 

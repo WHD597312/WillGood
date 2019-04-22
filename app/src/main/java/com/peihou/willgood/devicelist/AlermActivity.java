@@ -29,12 +29,14 @@ import android.widget.TextView;
 import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.custom.AlermDialog;
+import com.peihou.willgood.custom.AlermDialog2;
 import com.peihou.willgood.custom.AlermDialog3;
 import com.peihou.willgood.database.dao.impl.DeviceAlermDaoImpl;
 import com.peihou.willgood.pojo.Alerm;
 import com.peihou.willgood.service.MQService;
 import com.peihou.willgood.util.TenTwoUtil;
 import com.peihou.willgood.util.ToastUtil;
+import com.peihou.willgood.util.Utils;
 
 import org.json.JSONObject;
 
@@ -98,19 +100,21 @@ public class AlermActivity extends BaseActivity {
         list_alerm.setLayoutManager(new LinearLayoutManager(this));
 
         list = deviceAlermDao.findDeviceAlerms(deviceMac);
-        if (list.size()!=8){
-            deviceAlermDao.deleteDeviceAlerms(deviceMac);
-            list.add(new Alerm("来电报警",0,false,deviceMac));
-            list.add(new Alerm("断电报警",1,false,deviceMac));
-            list.add(new Alerm("温度报警",2,false,deviceMac));
-            list.add(new Alerm("湿度报警",3,false,deviceMac));
-            list.add(new Alerm("电压报警",4,false,deviceMac));
-            list.add(new Alerm("电流报警",5,false,deviceMac));
-            list.add(new Alerm("功率报警",6,false,deviceMac));
-            list.add(new Alerm("开关量报警",7,false,deviceMac));
-            deviceAlermDao.insertDeviceAlerms(list);
-        }
+        List<Alerm> list2 = deviceAlermDao.findDeviceAlerms(deviceMac);
 
+        if (list2.size() != 8) {
+            deviceAlermDao.deleteDeviceAlerms(deviceMac);
+            list2.add(new Alerm("来电报警", 0, "设备已来电!", false,  deviceMac, 0));
+            list2.add(new Alerm("断电报警", 1, "设备已断电,请及时处理", false,  deviceMac, 0));
+            list2.add(new Alerm("温度报警", 2, "温度报警,请注意", false, deviceMac, 0));
+            list2.add(new Alerm("湿度报警", 3, "湿度报警,请注意", false, deviceMac, 0));
+            list2.add(new Alerm("电压报警", 4, "电压报警,请注意", false, deviceMac, 0));
+            list2.add(new Alerm("电流报警", 5, "电流报警,请注意", false, deviceMac, 0));
+            list2.add(new Alerm("功率报警", 6, "功率报警,请注意", false, deviceMac, 0));
+            list2.add(new Alerm("开关量报警", 7, "开关量报警,请注意", false, deviceMac, 50));
+            deviceAlermDao.insertDeviceAlerms(list2);
+            list.addAll(list2);
+        }
 
 
 
@@ -131,6 +135,19 @@ public class AlermActivity extends BaseActivity {
     protected void onStart() {
         super.onStart();
         running = true;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mqService!=null){
+            List<Alerm> alerms=deviceAlermDao.findDeviceAlerms(deviceMac);
+            list.clear();
+            list.addAll(alerms);
+            adapter.notifyDataSetChanged();
+            mqService.getData(topicName, 0x66);
+            countTimer.start();
+        }
     }
 
     @Override
@@ -175,7 +192,7 @@ public class AlermActivity extends BaseActivity {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        if (popupWindow2==null)
+
             popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
@@ -326,8 +343,13 @@ public class AlermActivity extends BaseActivity {
                     if (macAddress.equals(deviceMac) && alerms.size() == 8) {
                         boolean online2 = intent.getBooleanExtra("online", false);
                         online = online2;
-                        for (int i = 0; i < alerms.size(); i++) {
+                        int len=alerms.size();
+                        for (int i = 0; i < len; i++) {
                             list.set(i, alerms.get(i));
+                        }
+                        if (click == 1) {
+                            mqService.starSpeech(macAddress,3);
+                            click=0;
                         }
                         adapter.notifyDataSetChanged();
                     }
@@ -379,18 +401,9 @@ public class AlermActivity extends BaseActivity {
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             if (viewType == 0) {
-                View view = View.inflate(context, R.layout.item_alerm0, null);
-                return new ViewHolder0(view);
-            } else if (viewType == 1) {
-                View view = View.inflate(context, R.layout.item_alerm1, null);
-                return new ViewHolder1(view);
-            } else if (viewType == 2) {
-                View view = View.inflate(context, R.layout.item_alerm2, null);
-                return new ViewHolder2(view);
-            } else if (viewType == 3) {
                 View view = View.inflate(context, R.layout.item_alerm3, null);
                 return new ViewHolder3(view);
-            } else if (viewType == 4) {
+            } else if (viewType == 1) {
                 View view = View.inflate(context, R.layout.item_alerm, null);
                 return new ViewHolder(view);
             }
@@ -399,110 +412,112 @@ public class AlermActivity extends BaseActivity {
 
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder2, final int position) {
-            if (position == 1) {
-                ViewHolder1 holder = (ViewHolder1) holder2;
-//                int once=2;//1时，为三次，2时为循环，0时是0次
-                if (once == 0) {
-                    holder.btn_close.setBackground(getResources().getDrawable(R.drawable.shape_voice_checked));
-                    holder.btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
-                    holder.btn_thr.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
-                    holder.btn_close.setTextColor(Color.parseColor("#ffffff"));
-                    holder.btn_loop.setTextColor(Color.parseColor("#939393"));
-                    holder.btn_thr.setTextColor(Color.parseColor("#939393"));
-                } else if (once == 2) {
-                    holder.btn_close.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
-                    holder.btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_voice_checked));
-                    holder.btn_thr.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
-                    holder.btn_close.setTextColor(Color.parseColor("#939393"));
-                    holder.btn_loop.setTextColor(Color.parseColor("#ffffff"));
-                    holder.btn_thr.setTextColor(Color.parseColor("#939393"));
-                } else if (once == 1) {
-                    holder.btn_close.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
-                    holder.btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
-                    holder.btn_thr.setBackground(getResources().getDrawable(R.drawable.shape_voice_checked));
-                    holder.btn_close.setTextColor(Color.parseColor("#939393"));
-                    holder.btn_loop.setTextColor(Color.parseColor("#939393"));
-                    holder.btn_thr.setTextColor(Color.parseColor("#ffffff"));
-                }
-                holder.btn_close.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (once == 0) {
-                            return;
-                        }
-                        once = 0;
-
-                        for (int i = 0; i <list.size() ; i++) {
-                            Alerm alerm=list.get(i);
-                            alerm.setDeviceAlarmBroadcast(once);
-                            deviceAlermDao.update(alerm);
-                            mqService.update(alerm);
-                        }
-
-                        adapter.notifyItemChanged(1);
-                    }
-
-                });
-                holder.btn_loop.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (once == 2) {
-                            return;
-                        }
-                        once = 2;
-                        for (int i = 0; i <list.size() ; i++) {
-                            Alerm alerm=list.get(i);
-                            alerm.setDeviceAlarmBroadcast(once);
-                            deviceAlermDao.update(alerm);
-                            mqService.update(alerm);
-                        }
-                        adapter.notifyItemChanged(1);
-                    }
-                });
-                holder.btn_thr.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (once == 1) {
-                            return;
-                        }
-                        once = 1;
-                        for (int i = 0; i <list.size() ; i++) {
-                            Alerm alerm=list.get(i);
-                            alerm.setDeviceAlarmBroadcast(once);
-                            deviceAlermDao.update(alerm);
-                            mqService.update(alerm);
-                        }
-                        adapter.notifyItemChanged(1);
-                    }
-                });
-
-            } else if (position == 2) {
-                ViewHolder2 holder = (ViewHolder2) holder2;
-                holder.img_switch.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (notify == 0) {
-                            notify = 1;
-                        } else if (notify == 1) {
-                            notify = 0;
-                        }
-                        for (int i = 0; i <list.size() ; i++) {
-                            Alerm alerm=list.get(i);
-                            alerm.setDeviceAlarmFlag(notify);
-                            deviceAlermDao.update(alerm);
-                            mqService.update(alerm);
-                        }
-                        adapter.notifyItemChanged(2);
-                    }
-                });
-                if (notify == 1) {
-                    holder.img_switch.setImageResource(R.mipmap.img_open);
-                } else {
-                    holder.img_switch.setImageResource(R.mipmap.img_close);
-                }
-
-            } else if (position > 3) {
-                final Alerm alerm = list.get(position-4);
+//            if (position == 1) {
+//                ViewHolder1 holder = (ViewHolder1) holder2;
+////                int once=2;//1时，为三次，2时为循环，0时是0次
+//                if (once == 0) {
+//                    holder.btn_close.setBackground(getResources().getDrawable(R.drawable.shape_voice_checked));
+//                    holder.btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
+//                    holder.btn_thr.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
+//                    holder.btn_close.setTextColor(Color.parseColor("#ffffff"));
+//                    holder.btn_loop.setTextColor(Color.parseColor("#939393"));
+//                    holder.btn_thr.setTextColor(Color.parseColor("#939393"));
+//                } else if (once == 2) {
+//                    holder.btn_close.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
+//                    holder.btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_voice_checked));
+//                    holder.btn_thr.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
+//                    holder.btn_close.setTextColor(Color.parseColor("#939393"));
+//                    holder.btn_loop.setTextColor(Color.parseColor("#ffffff"));
+//                    holder.btn_thr.setTextColor(Color.parseColor("#939393"));
+//                } else if (once == 1) {
+//                    holder.btn_close.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
+//                    holder.btn_loop.setBackground(getResources().getDrawable(R.drawable.shape_voice_unchecked));
+//                    holder.btn_thr.setBackground(getResources().getDrawable(R.drawable.shape_voice_checked));
+//                    holder.btn_close.setTextColor(Color.parseColor("#939393"));
+//                    holder.btn_loop.setTextColor(Color.parseColor("#939393"));
+//                    holder.btn_thr.setTextColor(Color.parseColor("#ffffff"));
+//                }
+//                holder.btn_close.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        if (once == 0) {
+//                            return;
+//                        }
+//                        once = 0;
+//
+//                        for (int i = 0; i <list.size() ; i++) {
+//                            Alerm alerm=list.get(i);
+//                            alerm.setDeviceAlarmBroadcast(once);
+//                            deviceAlermDao.update(alerm);
+//                            mqService.update(alerm);
+//                        }
+//
+//                        adapter.notifyItemChanged(1);
+//                    }
+//
+//                });
+//                holder.btn_loop.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        if (once == 2) {
+//                            return;
+//                        }
+//                        once = 2;
+//                        for (int i = 0; i <list.size() ; i++) {
+//                            Alerm alerm=list.get(i);
+//                            alerm.setDeviceAlarmBroadcast(once);
+//                            deviceAlermDao.update(alerm);
+//                            mqService.update(alerm);
+//                        }
+//                        adapter.notifyItemChanged(1);
+//                    }
+//                });
+//                holder.btn_thr.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        if (once == 1) {
+//                            return;
+//                        }
+//                        once = 1;
+//                        for (int i = 0; i <list.size() ; i++) {
+//                            Alerm alerm=list.get(i);
+//                            alerm.setDeviceAlarmBroadcast(once);
+//                            deviceAlermDao.update(alerm);
+//                            mqService.update(alerm);
+//                        }
+//                        adapter.notifyItemChanged(1);
+//                    }
+//                });
+//
+//            }
+//            else if (position == 2) {
+//                ViewHolder2 holder = (ViewHolder2) holder2;
+//                holder.img_switch.setOnClickListener(new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        if (notify == 0) {
+//                            notify = 1;
+//                        } else if (notify == 1) {
+//                            notify = 0;
+//                        }
+//                        for (int i = 0; i <list.size() ; i++) {
+//                            Alerm alerm=list.get(i);
+//                            alerm.setDeviceAlarmFlag(notify);
+//                            deviceAlermDao.update(alerm);
+//                            mqService.update(alerm);
+//                        }
+//                        adapter.notifyItemChanged(2);
+//                    }
+//                });
+//                if (notify == 1) {
+//                    holder.img_switch.setImageResource(R.mipmap.img_open);
+//                } else {
+//                    holder.img_switch.setImageResource(R.mipmap.img_close);
+//                }
+//
+//            }
+            if (position > 0) {
+                final Alerm alerm = list.get(position-1);
                 String name = alerm.getName();
                 String content = alerm.getContent();
                 int state = alerm.getState();
@@ -530,14 +545,15 @@ public class AlermActivity extends BaseActivity {
                         int alermState=data[0];
                         int states[]=TenTwoUtil.changeToTwo(alermState);
                         if (alerm.getState() == 1) {
-                            states[position-4]=0;
+                            states[position-1]=0;
                         } else {
-                            states[position - 4] = 1;
+                            states[position - 1] = 1;
                         }
                         data[0] = TenTwoUtil.changeToTen2(states);
                         if (mqService != null) {
                             boolean success = mqService.sendAlerm(topicName, mcuVersion, data);
                             countTimer.start();
+                            click=1;
 //                            if (success) {
 //                                list.set(position - 4, alerm);
 //                                notifyDataSetChanged();
@@ -546,20 +562,33 @@ public class AlermActivity extends BaseActivity {
                     }
                 });
 
+                holder.rl_alerm.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        updatePosition = position;
+                        if (position < 3) {
+                            setAlermDialog(position - 1);
+                        } else if (position >= 3 && position < 8) {
+                            setAlermDialog2(position - 3);
+                        } else if (position == 8) {
+                            setAlermDialog3();
+                        }
+                    }
+                });
             }
         }
 
         @Override
         public int getItemCount() {
-            return list.size() + 4;
+            return list.size() + 1;
         }
 
         @Override
         public int getItemViewType(int position) {
-            if (position < 4) {
+            if (position < 1) {
                 return position;
             } else {
-                return 4;
+                return 1;
             }
         }
     }
@@ -568,11 +597,300 @@ public class AlermActivity extends BaseActivity {
 
 
 
+    private AlermDialog alermDialog;
+
+    /**
+     * @param type 0为来电报警 1为断电报警
+     */
+    private void setAlermDialog(final int type) {
+        if (alermDialog != null && alermDialog.isShowing()) {
+            return;
+        }
+        alermDialog = new AlermDialog(this);
+        alermDialog.setMode(type);
+        alermDialog.setCanceledOnTouchOutside(false);
+        alermDialog.setOnNegativeClickListener(new AlermDialog.OnNegativeClickListener() {
+            @Override
+            public void onNegativeClick() {
+                alermDialog.dismiss();
+            }
+        });
+        alermDialog.setOnPositiveClickListener(new AlermDialog.OnPositiveClickListener() {
+            @Override
+            public void onPositiveClick() {
+                String content = alermDialog.getContent();
+                if (TextUtils.isEmpty(content))
+                    ToastUtil.showShort(AlermActivity.this, "内容不能为空");
+                else {
+                    try {
+                        alermDialog.dismiss();
+//                        params.clear();
+//                        params.put("deviceId", deviceId);
+//                        params.put("deviceAlarmNum", updatePosition - 2);
+//                        params.put("alarmName", content);
+//                        new UpdateAlermAsync(AlermActivity.this).execute(params).get(3, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+        });
+        alermDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                backgroundAlpha(1.0f);
+            }
+        });
+        backgroundAlpha(0.6f);
+        alermDialog.show();
+    }
+
+    private AlermDialog2 alermDialog2;
+
+    /**
+     * @param type 为0时，温度报警 1为湿度报警，2为电压报警，3，电流报警，4，功率报警
+     */
+    private void setAlermDialog2(final int type) {
+        if (alermDialog2 != null && alermDialog2.isShowing()) {
+            return;
+        }
+        Alerm alerm = list.get(type + 2);
+        alermDialog2 = new AlermDialog2(this);
+        alermDialog2.setMode(type);
+        double value = alerm.getValue();
+        BigDecimal b = new BigDecimal(value);
+        value = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
+        String ss = "" + value;
+        alermDialog2.setValue(ss);
+        int state2 = alerm.getState2();
+        if (0x11 == state2) {
+            alermDialog2.setOpen(1);
+        } else if (0x22 == state2) {
+            alermDialog2.setOpen(0);
+        }
+        alermDialog2.setCanceledOnTouchOutside(false);
+        alermDialog2.setCanceledOnTouchOutside(false);
+
+        alermDialog2.setOnNegativeClickListener(new AlermDialog2.OnNegativeClickListener() {
+            @Override
+            public void onNegativeClick() {
+                alermDialog2.dismiss();
+            }
+        });
+        alermDialog2.setOnPositiveClickListener(new AlermDialog2.OnPositiveClickListener() {
+            @Override
+            public void onPositiveClick() {
+                String content = alermDialog2.getContent();
+                String value = alermDialog2.getValue() + "";
+                int open = alermDialog2.getOpen();
+                if (TextUtils.isEmpty(content)) {
+                    ToastUtil.showShort(AlermActivity.this, "报警内容不能为空");
+                    return;
+                }
+                if (TextUtils.isEmpty(value)) {
+                    ToastUtil.showShort(AlermActivity.this, "报警数值不能为空");
+                    return;
+                } else {
+                    if (!Utils.isNumeric(value)) {
+                        ToastUtil.showShort(AlermActivity.this, "不正确的报警数值");
+                        return;
+                    }
+                }
+
+                try {
+                    double s = Double.parseDouble(value);
+                    if (type == 0) {
+                        if (s >= -50 && s <= 120) {
+                            s += 50;
+                            BigDecimal b = new BigDecimal(s);
+                            s = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
+                            int alermValue = (int)( s * 10);
+                            int data []=mqService.getAlermData();
+                            data[1] = alermValue / 256;
+                            data[2] = alermValue % 256;
+                            if (open == 1) {
+                                data[3] = 0x11;
+                            } else {
+                                data[3] = 0x22;
+                            }
+                            mqService.sendAlerm(topicName, mcuVersion, data);
+                            countTimer.start();
+                           click = 1;
+
+                        } else {
+                            ToastUtil.showShort(AlermActivity.this, "不在该报警范围之内!");
+                            return;
+                        }
+                    } else if (type == 1) {
+                        if (s >= 0 && s <= 100) {
+                            BigDecimal b = new BigDecimal(s);
+                            s = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
+                            int alermValue = (int) (s * 10);
+                            int data []=mqService.getAlermData();
+                            data[4] = alermValue / 256;
+                            data[5] = alermValue % 256;
+                            if (open == 1) {
+                                data[6] = 0x11;
+                            } else {
+                                data[6] = 0x22;
+                            }
+                            mqService.sendAlerm(topicName, mcuVersion, data);
+                            click=1;
+                            countTimer.start();
+
+                        } else {
+                            ToastUtil.showShort(AlermActivity.this, "不在该报警范围之内!");
+                            return;
+                        }
+                    } else if (type == 2) {
+                        if (s >= 0 && s <= 1000) {
+                            BigDecimal b = new BigDecimal(s);
+                            s = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
+                            int alermValue = (int) (s*10);
+                            int data []=mqService.getAlermData();
+                            data[7] = alermValue / 256;
+                            data[8] = alermValue % 256;
+                            if (open == 1) {
+                                data[9] = 0x11;
+                            } else {
+                                data[9] = 0x22;
+                            }
+                            mqService.sendAlerm(topicName, mcuVersion, data);
+                            click=1;
+                            countTimer.start();
+
+                        } else {
+                            ToastUtil.showShort(AlermActivity.this, "不在该报警范围之内!");
+                            return;
+                        }
+                    } else if (type == 3) {
+                        if (s >= 0 && s <= 1000) {
+                            BigDecimal b = new BigDecimal(s);
+                            s = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
+                            int alermValue = (int) (s * 10);
+                            int data []=mqService.getAlermData();
+                            data[10] = alermValue / 256;
+                            data[11] = alermValue % 256;
+                            if (open == 1) {
+                                data[12] = 0x11;
+                            } else {
+                                data[12] = 0x22;
+                            }
+                            mqService.sendAlerm(topicName, mcuVersion, data);
+                            click=1;
+                            countTimer.start();
+
+                        } else {
+                            ToastUtil.showShort(AlermActivity.this, "不在该报警范围之内!");
+                            return;
+                        }
+                    } else if (type == 4) {
+                        if (s >= 0) {
+                            BigDecimal b = new BigDecimal(s);
+                            s = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
+                            int alermValue = (int) (s * 10);
+                            int data []=mqService.getAlermData();
+                            data[13] = alermValue / 256;
+                            data[14] = alermValue % 256;
+                            if (open == 1) {
+                                data[15] = 0x11;
+                            } else {
+                                data[15] = 0x22;
+                            }
+                            mqService.sendAlerm(topicName, mcuVersion, data);
+                            click=1;
+                            countTimer.start();
+
+                        } else {
+                            ToastUtil.showShort(AlermActivity.this, "不在该报警范围之内!");
+                            return;
+                        }
+                    }
+                    alermDialog2.dismiss();
+//                    params.clear();
+//                    params.put("deviceId", deviceId);
+//                    params.put("deviceAlarmNum", updatePosition - 2);
+//                    params.put("alarmName", content);
+//                    new UpdateAlermAsync(AlermActivity.this).execute(params).get(3, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        alermDialog2.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                backgroundAlpha(1.0f);
+            }
+        });
+        backgroundAlpha(0.6f);
+        alermDialog2.show();
+
+    }
+
     //设置蒙版
     private void backgroundAlpha(float f) {
         WindowManager.LayoutParams lp = getWindow().getAttributes();
         lp.alpha = f;
         getWindow().setAttributes(lp);
+    }
+
+    private AlermDialog3 alermDialog3;
+
+    /**
+     * 开关量报警
+     */
+    private void setAlermDialog3() {
+        if (alermDialog3 != null && alermDialog3.isShowing()) {
+            return;
+        }
+        alermDialog3 = new AlermDialog3(this);
+        Alerm alerm = list.get(7);
+        int state2 = alerm.getState2();
+        alermDialog3.setOpen(state2);
+        alermDialog3.setCanceledOnTouchOutside(false);
+
+        alermDialog3.setOnNegativeClickListener(new AlermDialog3.OnNegativeClickListener() {
+            @Override
+            public void onNegativeClick() {
+                alermDialog3.dismiss();
+            }
+        });
+        alermDialog3.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                backgroundAlpha(1.0f);
+            }
+        });
+        alermDialog3.setOnPositiveClickListener(new AlermDialog3.OnPositiveClickListener() {
+            @Override
+            public void onPositiveClick() {
+                String content = alermDialog3.getContent();
+                int open = alermDialog3.getOpen();
+                if (TextUtils.isEmpty(content))
+                    ToastUtil.showShort(AlermActivity.this, "内容不能为空");
+                else {
+                    try {
+                        int[] data=mqService.getAlermData();
+                        data[16] = open;
+                        mqService.sendAlerm(topicName, mcuVersion, data);
+                        click=1;
+//                        params.clear();
+//                        params.put("deviceId", deviceId);
+//                        params.put("deviceAlarmNum", updatePosition - 2);
+//                        params.put("alarmName", content);
+//                        new UpdateAlermAsync(AlermActivity.this).execute(params).get(3, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                alermDialog3.dismiss();
+            }
+        });
+        backgroundAlpha(0.6f);
+        alermDialog3.show();
+
     }
 
 

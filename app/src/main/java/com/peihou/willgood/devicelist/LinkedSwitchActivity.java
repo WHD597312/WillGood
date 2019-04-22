@@ -84,7 +84,7 @@ public class LinkedSwitchActivity extends BaseActivity {
 //        topicName = "qjjc/gateway/" + deviceMac + "/client_to_server";
         deviceLineDao=new DeviceLineDaoImpl(getApplicationContext());
         deviceLinkDao=new DeviceLinkDaoImpl(getApplicationContext());
-        lines=deviceLineDao.findDeviceOnlineLines(deviceId);
+        lines=deviceLineDao.findDeviceOnlineLines(deviceMac);
 
         adapter=new LinesAdapter(this,lines);
         gv_line.setAdapter(adapter);
@@ -135,6 +135,12 @@ public class LinkedSwitchActivity extends BaseActivity {
 
     }
 
+    @Override
+    public void onBackPressed() {
+        setResult(1002);
+        super.onBackPressed();
+    }
+
     String s="开关量";
     StringBuffer sb=new StringBuffer();
 
@@ -142,6 +148,7 @@ public class LinkedSwitchActivity extends BaseActivity {
     public void onClick(View view){
         switch (view.getId()){
             case R.id.img_back:
+                setResult(1002);
                 finish();
                 break;
             case R.id.img_ensure:

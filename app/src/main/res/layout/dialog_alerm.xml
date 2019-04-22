@@ -34,6 +34,8 @@
         android:textColor="#4b4b4b"
         android:background="#f5f5f5"
         android:textColorHint="#4b4b4b"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
         />
     <View
         android:id="@+id/view2"

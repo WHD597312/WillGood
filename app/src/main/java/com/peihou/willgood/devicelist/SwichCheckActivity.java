@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.LinearLayoutManager;
@@ -81,7 +82,7 @@ public class SwichCheckActivity extends BaseActivity {
         list.add(new SwtichState(0,"开关量6","",0));
         list.add(new SwtichState(0,"开关量7","",0));
         list.add(new SwtichState(0,"开关量8","",0));
-        list.add(new SwtichState(0,"开关量8","",0));
+
 
 
         adapter=new MyAdapter(this,list);
@@ -95,7 +96,62 @@ public class SwichCheckActivity extends BaseActivity {
         Intent service=new Intent(this,MQService.class);
         bind=bindService(service,connection,Context.BIND_AUTO_CREATE);
     }
+    CountTimer countTimer = new CountTimer(2000, 1000);
 
+    class CountTimer extends CountDownTimer {
+
+        /**
+         * @param millisInFuture    The number of millis in the future from the call
+         *                          to {@link #start()} until the countdown is done and {@link #onFinish()}
+         *                          is called.
+         * @param countDownInterval The interval along the way to receive
+         *                          {@link #onTick(long)} callbacks.
+         */
+        public CountTimer(long millisInFuture, long countDownInterval) {
+            super(millisInFuture, countDownInterval);
+        }
+
+        @Override
+        public void onTick(long millisUntilFinished) {
+            popupmenuWindow3();
+        }
+
+        @Override
+        public void onFinish() {
+            if (popupWindow2 != null && popupWindow2.isShowing()) {
+                popupWindow2.dismiss();
+            }
+        }
+    }
+
+    private PopupWindow popupWindow2;
+
+    public void popupmenuWindow3() {
+        if (popupWindow2 != null && popupWindow2.isShowing()) {
+            return;
+        }
+        View view = View.inflate(this, R.layout.progress, null);
+        TextView tv_load = view.findViewById(R.id.tv_load);
+        tv_load.setTextColor(getResources().getColor(R.color.white));
+
+            popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        //添加弹出、弹入的动画
+        popupWindow2.setAnimationStyle(R.style.Popupwindow);
+        popupWindow2.setFocusable(false);
+        popupWindow2.setOutsideTouchable(false);
+        backgroundAlpha(0.6f);
+        popupWindow2.setOnDismissListener(new PopupWindow.OnDismissListener() {
+            @Override
+            public void onDismiss() {
+                backgroundAlpha(1.0f);
+            }
+        });
+//        ColorDrawable dw = new ColorDrawable(0x30000000);
+//        popupWindow.setBackgroundDrawable(dw);
+//        popupWindow2.showAsDropDown(et_wifi, 0, -20);
+        popupWindow2.showAtLocation(list_linked, Gravity.CENTER, 0, 0);
+        //添加按键事件监听
+    }
     @OnClick({R.id.img_back})
     public void onClick(View view){
         switch (view.getId()){
@@ -132,13 +188,15 @@ public class SwichCheckActivity extends BaseActivity {
             int state2=state.getState();
             holder.tv_name.setText(name);
             String pic=state.getPic();
-            if (state2==2){
-                holder.tv_state.setText("异常");
+            if (state2 == 2) {
+//                holder.tv_state.setText("异常");
+                holder.tv_state.setText("断开");
                 holder.img_state.setImageResource(R.mipmap.img_bad);
-            }else if (state2==1){
-                holder.tv_state.setText("正常");
+            } else if (state2 == 1) {
+//                holder.tv_state.setText("正常");
+                holder.tv_state.setText("闭合");
                 holder.img_state.setImageResource(R.mipmap.img_right);
-            }else if (state2==0){
+            } else if (state2 == 0) {
                 holder.tv_state.setText("无效");
                 holder.img_state.setImageResource(R.mipmap.img_invalid);
             }
@@ -170,6 +228,9 @@ public class SwichCheckActivity extends BaseActivity {
         if (bind){
             unbindService(connection);
         }
+        if (popupWindow2!=null && popupWindow2.isShowing()){
+            popupWindow2.dismiss();
+        }
     }
 
     boolean bind=false;
@@ -181,6 +242,7 @@ public class SwichCheckActivity extends BaseActivity {
             mqService=binder.getService();
             if (mqService!=null){
                 mqService.getData(topicName,0x55);
+                countTimer.start();
             }
         }
 
@@ -248,6 +310,14 @@ public class SwichCheckActivity extends BaseActivity {
     protected void onStart() {
         super.onStart();
         running=true;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mqService != null) {
+            mqService.getData(topicName, 0x55);
+        }
     }
 
     @Override

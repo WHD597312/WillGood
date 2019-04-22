@@ -201,8 +201,10 @@
         android:layout_marginTop="@dimen/dp_20"
         android:layout_marginLeft="@dimen/dp_15"
         android:textColor="@color/white"
+        android:visibility="gone"
         />
     <RelativeLayout
+        android:visibility="gone"
         android:layout_below="@id/tv_auto"
         android:id="@+id/rl_bottom"
         android:layout_width="match_parent"
@@ -241,7 +243,7 @@
             />
     </RelativeLayout>
     <Button
-        android:layout_below="@+id/rl_bottom"
+        android:layout_below="@+id/rl_body"
         android:id="@+id/btn_submit"
         android:layout_width="match_parent"
         android:layout_height="@dimen/dp_40"

@@ -10,9 +10,12 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -30,6 +33,7 @@ import android.widget.TextView;
 import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.base.MyApplication;
+import com.peihou.willgood.custom.ChangeDialog;
 import com.peihou.willgood.custom.ExitLoginDialog;
 import com.peihou.willgood.database.dao.impl.DeviceDaoImpl;
 import com.peihou.willgood.devicelist.AlermActivity;
@@ -44,9 +48,11 @@ import com.peihou.willgood.devicelist.TimerTaskActivity;
 import com.peihou.willgood.login.LoginActivity;
 import com.peihou.willgood.pojo.Device;
 import com.peihou.willgood.receiver.MQTTMessageReveiver;
+import com.peihou.willgood.receiver.UtilsJPush;
 import com.peihou.willgood.service.MQService;
 import com.peihou.willgood.service.ServiceUtils;
 import com.peihou.willgood.util.NoFastClickUtils;
+import com.peihou.willgood.util.TenTwoUtil;
 import com.peihou.willgood.util.ToastUtil;
 
 import java.util.ArrayList;
@@ -55,6 +61,7 @@ import java.util.List;
 import butterknife.BindView;
 
 import butterknife.OnClick;
+import cn.jpush.android.api.JPushInterface;
 import me.jessyan.autosize.internal.CustomAdapt;
 import retrofit2.http.OPTIONS;
 
@@ -111,8 +118,10 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
     DeviceDaoImpl deviceDao;
     @BindView(R.id.tv_offline) TextView tv_offline;
     @BindView(R.id.tv_offline2) TextView tv_offline2;
+    int userId;
     @Override
     public void initParms(Bundle parms) {
+        userId=parms.getInt("userId");
     }
 
     @Override
@@ -121,17 +130,18 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
     }
 
     Animation rotateAnimation;
-    Device device;
-
+    Device device;//配电系统
+    Device device2;//供电系统
     String deviceMac;
-    String topicName;//设备发送主题
+    String topicName;//配电设备发送主题
+    String topicName2;//控制设备主题
     MQTTMessageReveiver reveiver;
 
     @Override
     public void initView(View view) {
+        requestOverlayPermission();
         application = (MyApplication) getApplication();
         deviceDao = new DeviceDaoImpl(getApplicationContext());
-        List<Device> devices = deviceDao.findAllDevice();
 
         reveiver = new MQTTMessageReveiver();
         IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
@@ -140,22 +150,28 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
         IntentFilter filter2 = new IntentFilter("MainActivity");
         filter2.addAction("offline");
         registerReceiver(messageReceiver, filter2);
-
+        JPushInterface.stopPush(this);
         Intent service = new Intent(this, MQService.class);
         bind = bindService(service, connection, Context.BIND_AUTO_CREATE);
-        for (Device device2 : devices) {
-            device = device2;
+
+       device=deviceDao.findDeviceByType(1);
+       device2=deviceDao.findDeviceByType(2);
+        if (device != null) {
             device.setOnline(false);
             deviceDao.update(device);
-            type = device.getSystem();
-            break;
+           setMode(1);
         }
-        if (device != null) {
-            deviceMac = device.getDeviceOnlyMac();
-            setMode();
-            topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
+        if (device2!=null){
+            device2.setOnline(false);
+            deviceDao.update(device2);
+            setMode(2);
         }
 
+        if (device!=null && device2!=null){
+            UtilsJPush.stopJpush(this);
+        }else {
+            UtilsJPush.resumeJpush(this);
+        }
         rotateAnimation = AnimationUtils.loadAnimation(this, R.anim.img_animation);
         rotateAnimation.setInterpolator(new LinearInterpolator());
 
@@ -207,6 +223,7 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                 backgroundAlpha(1.0f);
             }
         });
+        UtilsJPush.stopJpush(this);
         backgroundAlpha(0.6f);
         exitLoginDialog.show();
     }
@@ -214,6 +231,11 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
     private void setExitLoginPage() {
         List<Activity> activities = application.getActivities();
         List<Activity> list = new ArrayList<>();
+        if (mqService!=null){
+            mqService.clearCountTimer();
+            mqService.cancelAllsubscibe();
+
+        }
         for (Activity activity : activities) {
             if (!(activity instanceof LoginActivity)) {
                 list.add(activity);
@@ -232,9 +254,9 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
     }
 
 
-    int type = -1;//0为配电系统 1为配电系统
+    int type = -1;//1为配电系统 2为配电系统
 
-    private void setMode() {
+    private void setMode(int type) {
         if (type == 1) {
             tv1.setBackgroundResource(R.drawable.bg_fill5_green);
             tv2.setBackgroundResource(R.drawable.bg_fill5_green);
@@ -258,19 +280,19 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                     imgSwitch1.setImageResource(R.mipmap.ic_main_open2);
                     tvSwitch1.setTextColor(this.getResources().getColor(R.color.main_gray));
                 }
-                double temp = device.getTemp();
-                double hum = device.getHum();
-                String s = "" + String.format("%.1f", temp);
-                String s2 = "" + String.format("%.1f", hum);
-                tvTem.setText(s);
-                tvHum.setText(s2);
+//                double temp = device.getTemp();
+//                double hum = device.getHum();
+//                String s = "" + String.format("%.1f", temp);
+//                String s2 = "" + String.format("%.1f", hum);
+//                tvTem.setText(s);
+//                tvHum.setText(s2);
             } else {
                 imgSwitch1.setImageResource(R.mipmap.ic_main_open2);
                 llSwitch1.setBackgroundResource(R.mipmap.bg_main_switch2);
                 tv_offline.setVisibility(View.VISIBLE);
             }
         } else if (type == 2) {
-            if (device.getOnline()) {
+            if (device2.getOnline()) {
                 tv_offline2.setVisibility(View.GONE);
                 imgTem.setImageResource(R.mipmap.ic_tem2);
                 imgHum.setImageResource(R.mipmap.ic_hum2);
@@ -281,7 +303,7 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                 imgRefresh2.setImageResource(R.mipmap.ic_refresh1);
 
 
-                if (device.getPlMemory() == 1) {
+                if (device2.getPlMemory() == 1) {
                     tv7.setBackgroundResource(R.drawable.bg_fill5_green);
                 } else {
                     tv7.setBackgroundResource(R.drawable.bg_fill5_gray);
@@ -297,8 +319,8 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                     tvSwitch2.setTextColor(this.getResources().getColor(R.color.main_gray));
 
                 }
-                double temp = device.getTemp();
-                double hum = device.getHum();
+                double temp = device2.getTemp();
+                double hum = device2.getHum();
                 String s = "" + String.format("%.1f", temp);
                 String s2 = "" + String.format("%.1f", hum);
                 tvTem.setText(s);
@@ -366,7 +388,7 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        if (popupWindow2 == null)
+
             popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
@@ -398,6 +420,13 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
         running = true;
     }
 
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    private int click=0;
     @OnClick({R.id.img_exit, R.id.img_add, R.id.tv1, R.id.tv2, R.id.tv3, R.id.tv4, R.id.tv5, R.id.tv6, R.id.ll_switch1, R.id.img_refresh1, R.id.ll_switch2, R.id.tv7, R.id.img_refresh2})
     public void onClick(View view) {
         switch (view.getId()) {
@@ -405,14 +434,16 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                 exitLoginDialog();
                 break;
             case R.id.img_add:
-                startActivity(DeviceListActivity.class);
+                Intent intent=new Intent(this,DeviceListActivity.class);
+                intent.putExtra("userId",userId);
+                startActivity(intent);
                 break;
             case R.id.tv1:
-                if (type == 1) {
-                    if (isOpen1) {
+                if (device!=null) {
+
                         if (device.getOnline()) {
                             Intent timerIntent = new Intent(this, TimerTaskActivity.class);
-                            timerIntent.putExtra("deviceMac", deviceMac);
+                            timerIntent.putExtra("deviceMac", device.getDeviceOnlyMac());
                             startActivity(timerIntent);
                         } else {
                             ToastUtil.show(this, "设备已离线", 0);
@@ -420,20 +451,16 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                                 mqService.getData(topicName, 0x11);
                             }
                         }
-                    } else {
-                        ToastUtil.show(this, "请打开配电系统", 0);
-                        break;
-                    }
+
                 } else {
                     ToastUtil.show(this, "请添加配电系统设备", 0);
                 }
                 break;
             case R.id.tv2:
-                if (type == 1) {
-                    if (isOpen1) {
+                if (device!=null) {
                         if (device.getOnline()) {
                             Intent linkIntent = new Intent(this, LinkedControlActivity.class);
-                            linkIntent.putExtra("deviceMac", deviceMac);
+                            linkIntent.putExtra("deviceMac", device.getDeviceOnlyMac());
                             linkIntent.putExtra("online", true);
                             startActivity(linkIntent);
                         } else {
@@ -443,20 +470,18 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                             }
 
                         }
-                    } else {
-                        ToastUtil.show(this, "请打开配电系统", 0);
-                    }
+
 
                 } else {
                     ToastUtil.show(this, "请添加配电系统设备", 0);
                 }
                 break;
             case R.id.tv3:
-                if (type == 1) {
-                    if (isOpen1) {
+                if (device!=null) {
+
                         if (device.getOnline()) {
                             Intent switchIntent = new Intent(this, SwichCheckActivity.class);
-                            switchIntent.putExtra("deviceMac", deviceMac);
+                            switchIntent.putExtra("deviceMac", device.getDeviceOnlyMac());
                             switchIntent.putExtra("online", true);
                             startActivity(switchIntent);
                         } else {
@@ -465,22 +490,16 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                                 mqService.getData(topicName, 0x11);
                             }
                         }
-                    } else {
-                        ToastUtil.show(this, "请打开配电系统", 0);
-                        if (mqService != null) {
-                            mqService.getData(topicName, 0x11);
-                        }
-                        break;
-                    }
+
                 } else
                     ToastUtil.show(this, "请添加配电系统设备", 0);
                 break;
             case R.id.tv4:
-                if (type == 1) {
-                    if (isOpen1) {
+                if (device!=null) {
+
                         if (device.getOnline()) {
                             Intent alermIntent = new Intent(this, AlermActivity.class);
-                            alermIntent.putExtra("deviceMac", deviceMac);
+                            alermIntent.putExtra("deviceMac", device.getDeviceOnlyMac());
                             alermIntent.putExtra("online", true);
                             startActivity(alermIntent);
                         } else {
@@ -489,39 +508,35 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                             }
                             ToastUtil.show(this, "设备已离线", 0);
                         }
-                    } else {
-                        ToastUtil.show(this, "请打开配电系统", 0);
-                    }
                 } else
                     ToastUtil.show(this, "请添加配电系统设备", 0);
                 break;
             case R.id.tv5:
-                if (type == 1) {
-                    if (isOpen1) {
+                if (device!=null) {
+
                         Intent locationIntent = new Intent(this, LocationActivity.class);
-                        locationIntent.putExtra("deviceMac", deviceMac);
+                        locationIntent.putExtra("deviceMac", device.getDeviceOnlyMac());
                         startActivity(locationIntent);
-                    } else {
-                        ToastUtil.show(this, "请打开配电系统", 0);
-                    }
+
                 } else {
                     ToastUtil.show(this, "请添加配电系统设备", 0);
                 }
                 break;
             case R.id.tv6:
-                if (type == 1) {
-                    if (isOpen1) {
+                if (device!=null) {
+
                         Intent intent2 = new Intent(this, PowerLostMomoryActivity.class);
-                        intent2.putExtra("open", device.getPlMemory());
-                        startActivityForResult(intent2, 1000);
-                    } else {
-                        ToastUtil.show(this, "请打开配电系统", 0);
-                    }
+                        intent2.putExtra("plMemory", device.getPlMemory());
+                        intent2.putExtra("deviceMac",device.getDeviceOnlyMac());
+                    intent2.putExtra("type",1);
+
+                    startActivityForResult(intent2, 1000);
+
                 } else
                     ToastUtil.show(this, "请添加配电系统设备", 0);
                 break;
             case R.id.ll_switch1:
-                if (type == 1) {
+                if (device!=null) {
                     if (popupWindow2 != null && popupWindow2.isShowing()) {
                         ToastUtil.showShort(this, "请稍后...");
                         break;
@@ -534,33 +549,38 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                         ToastUtil.show(this, "设备已离线", 0);
                         break;
                     }
-
+                    String topicName = "qjjc/gateway/" + device.getDeviceOnlyMac() + "/server_to_client";
                     if (isOpen1) {
-                        isOpen1 = false;
                         device.setDeviceState(0);
-                        device.setPrelineswitch(0);
-                        device.setLastlineswitch(0);
+                        int[] preLines = TenTwoUtil.changeToTwo(device.getPrelineswitch());
+                        preLines[0]=0;
+                        int preLineSwitch=TenTwoUtil.changeToTen2(preLines);
+                        device.setPrelineswitch(preLineSwitch);
                         device.setPrelinesjog(0);
                         device.setLastlinesjog(0);
                         mqService.sendBasic(topicName,device);
+                        click=1;
                         countTimer.start();
                     } else {
-                        isOpen1 = true;
                         device.setDeviceState(1);
-                        device.setPrelineswitch(128);
-                        device.setLastlineswitch(0);
+                        int[] preLines = TenTwoUtil.changeToTwo(device.getPrelineswitch());
+                        preLines[0]=1;
+                        int preLineSwitch=TenTwoUtil.changeToTen2(preLines);
+                        device.setPrelineswitch(preLineSwitch);
                         device.setPrelinesjog(0);
                         device.setLastlinesjog(0);
                         mqService.sendBasic(topicName,device);
+                        click=1;
                         countTimer.start();
                     }
                 } else
                     ToastUtil.show(this, "请添加配电系统设备", 0);
                 break;
             case R.id.img_refresh1:
-                if (type == 1) {
+                if (device!=null) {
                     imgRefresh1.startAnimation(rotateAnimation);
                     if (mqService != null) {
+                        String topicName = "qjjc/gateway/" + device.getDeviceOnlyMac() + "/server_to_client";
                         mqService.getData(topicName, 0x11);
                     }
                 } else {
@@ -568,32 +588,41 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                 }
                 break;
             case R.id.ll_switch2:
-                if (type == 2) {
+                if (device2!=null) {
                     if (popupWindow2 != null && popupWindow2.isShowing()) {
                         ToastUtil.showShort(this, "请稍后...");
                         break;
                     }
-                    if (!device.getOnline()) {
+                    if (!device2.getOnline()) {
                         if (mqService != null) {
-                            mqService.getData(topicName, 0x11);
+                            String topicName = "qjjc/gateway/" + device2.getDeviceOnlyMac() + "/server_to_client";
+                            mqService.getData(topicName,0x11);
                         }
                         countTimer.start();
                         ToastUtil.show(this, "设备已离线", 0);
                         break;
                     }
                     if (isOpen2) {
-                        device.setPrelineswitch(0);
-                        device.setLastlineswitch(0);
-                        device.setPrelinesjog(0);
-                        device.setLastlinesjog(0);
+                        device.setDeviceState(0);
+                        int[] preLines = TenTwoUtil.changeToTwo(device2.getPrelineswitch());
+                        preLines[0]=0;
+                        int preLineSwitch=TenTwoUtil.changeToTen2(preLines);
+                        device2.setPrelineswitch(preLineSwitch);
+                        device2.setPrelinesjog(0);
+                        device2.setLastlinesjog(0);
                     } else {
-                        device.setPrelineswitch(128);
-                        device.setLastlineswitch(0);
-                        device.setPrelinesjog(0);
-                        device.setLastlinesjog(0);
+                        device.setDeviceState(1);
+                        int[] preLines = TenTwoUtil.changeToTwo(device2.getPrelineswitch());
+                        preLines[0]=1;
+                        int preLineSwitch=TenTwoUtil.changeToTen2(preLines);
+                        device2.setPrelineswitch(preLineSwitch);
+                        device2.setPrelinesjog(0);
+                        device2.setLastlinesjog(0);
                     }
                     if (mqService != null) {
-                        mqService.sendBasic(topicName, device);
+                        String topicName = "qjjc/gateway/" + device2.getDeviceOnlyMac() + "/server_to_client";
+                        mqService.sendBasic(topicName, device2);
+                        click=1;
                         countTimer.start();
                     }
 
@@ -602,18 +631,21 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
                 }
                 break;
             case R.id.tv7:
-                if (type == 2) {
+                if (device2!=null) {
                     Intent intent2 = new Intent(this, PowerLostMomoryActivity.class);
-                    intent2.putExtra("open", device.getPlMemory());
-                    startActivityForResult(intent2, 1000);
+                    intent2.putExtra("plMemory", device2.getPlMemory());
+                    intent2.putExtra("deviceMac",device2.getDeviceOnlyMac());
+                    intent2.putExtra("type",2);
+                    startActivityForResult(intent2, 1001);
                 } else
                     ToastUtil.show(this, "请添加控制系统设备", 0);
                 break;
             case R.id.img_refresh2:
-                if (type == 2) {
+                if (device2!=null) {
                     if (NoFastClickUtils.isFastClick()) {
                         imgRefresh2.startAnimation(rotateAnimation);
                         if (mqService != null) {
+                            String topicName = "qjjc/gateway/" + device2.getDeviceOnlyMac() + "/server_to_client";
                             mqService.getData(topicName, 0x11);
                         }
                     } else {
@@ -629,11 +661,22 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == 1000 && device != null) {
-            int open = data.getIntExtra("open", 0);
-            device.setPlMemory(open);
-            deviceDao.update(device);
-            setMode();
+        if (data!=null && data.hasExtra("click")){
+            int click=data.getIntExtra("click",0);
+            if (click==1){
+                if (resultCode == 1000 && device != null) {
+                    int plMemory = data.getIntExtra("plMemory", 0);
+                    device.setPlMemory(plMemory);
+                    deviceDao.update(device);
+                    setMode(1);
+                }else if (resultCode==1001 && device2!=null){
+                    int plMemory = data.getIntExtra("plMemory", 0);
+                    device2.setPlMemory(plMemory);
+                    deviceDao.update(device2);
+                    setMode(2);
+                }
+            }
+
         }
     }
 
@@ -644,8 +687,14 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
         public void onServiceConnected(ComponentName name, IBinder service) {
             MQService.LocalBinder binder = (MQService.LocalBinder) service;
             mqService = binder.getService();
-            List<Device> devices = deviceDao.findAllDevice();
-            if (mqService != null) {
+            List<Device> devices = new ArrayList<>();
+            if (device!=null){
+                devices.add(device);
+            }
+            if (device2!=null){
+                devices.add(device2);
+            }
+            if (mqService != null && !devices.isEmpty()) {
                 mqService.subscribeAll(devices);
                 for (Device device : devices) {
                     String deviceMac = device.getDeviceOnlyMac();
@@ -673,33 +722,77 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
             try {
                 String action = intent.getAction();
                 if ("offline".equals(action)) {
-                    String macAddress = intent.getStringExtra("macAddress");
-                    if (intent.hasExtra("all") || macAddress.equals(deviceMac)) {
-                        device.setOnline(false);
-                        device.setTemp(0);
-                        device.setHum(0);
-                        device.setCurrent(0);
-                        device.setVotage(0);
-                        deviceDao.update(device);
-                        setMode();
+                    if (intent.hasExtra("all")) {
+                        if (device!=null){
+                            device.setOnline(false);
+                            device.setTemp(0);
+                            device.setHum(0);
+                            device.setCurrent(0);
+                            device.setVotage(0);
+                            deviceDao.update(device);
+                            setMode(1);
+                        }
+                        if (device2!=null){
+                            device2.setOnline(false);
+                            device2.setTemp(0);
+                            device2.setHum(0);
+                            deviceDao.update(device2);
+                            setMode(2);
+                        }
+                    }else {
+                        String macAddress = intent.getStringExtra("macAddress");
+                        if (device!=null && device.getDeviceOnlyMac().equals(macAddress)){
+                            device.setOnline(false);
+                            device.setTemp(0);
+                            device.setHum(0);
+                            device.setCurrent(0);
+                            device.setVotage(0);
+                            deviceDao.update(device);
+                            setMode(1);
+                        }else if (device2!=null && device2.getDeviceOnlyMac().equals(macAddress)){
+                            device2.setOnline(false);
+                            device2.setTemp(0);
+                            device2.setHum(0);
+                            deviceDao.update(device2);
+                            setMode(2);
+                        }
                     }
                 } else {
                     String macAddress = intent.getStringExtra("macAddress");
-                    if (macAddress.equals(deviceMac)) {
-                        Device device2 = (Device) intent.getSerializableExtra("device");
-                        if (device2 != null) {
-                            if (type==1 && device2.getPrelineswitch()>=128){
-                                isOpen1=true;
-                            }else if (type==1 && device2.getPrelineswitch()<128){
-                                isOpen1=false;
-                            }else if (type==2 && device2.getPrelineswitch()>=128){
-                                isOpen2=true;
-                            }else if (type==2 && device2.getPrelineswitch()<128){
-                                isOpen2=false;
+                    if (device!=null && macAddress.equals(device.getDeviceOnlyMac())){
+                        Device device3 = (Device) intent.getSerializableExtra("device");
+                        device=device3;
+                        if (device3.getPrelineswitch()>=128){
+                            isOpen1=true;
+                            if (mqService!=null && click==1){
+                                mqService.starSpeech(macAddress,0);
                             }
-                            device = device2;
-                            setMode();
+                            click=0;
+                        }else  if (device3.getPrelineswitch()<128){
+                            isOpen1=false;
+                            if (mqService!=null && click==1){
+                                mqService.starSpeech(macAddress,1);
+                            }
+                            click=0;
                         }
+                        setMode(1);
+                    }else if (device2!=null && macAddress.equals(device2.getDeviceOnlyMac())){
+                        Device device3 = (Device) intent.getSerializableExtra("device");
+                        device2=device3;
+                        if (device3.getPrelineswitch()>=128){
+                            isOpen2=true;
+                            if (mqService!=null && click==1){
+                                mqService.starSpeech(macAddress,0);
+                            }
+                            click=0;
+                        }else  if (device3.getPrelineswitch()<128){
+                            isOpen2=false;
+                            if (mqService!=null && click==1){
+                                mqService.starSpeech(macAddress,1);
+                            }
+                            click=0;
+                        }
+                        setMode(2);
                     }
                 }
             } catch (Exception e) {
@@ -711,11 +804,13 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
     }
 
     public static boolean running = false;
-
+    int stop=0;
     @Override
     protected void onStop() {
         super.onStop();
         running = false;
+        click=0;
+        stop=1;
     }
 
     @Override
@@ -734,5 +829,57 @@ public class MainActivity extends BaseActivity  implements CustomAdapt {
         if (messageReceiver != null) {
             unregisterReceiver(messageReceiver);
         }
+    }
+    private static final int REQUEST_OVERLAY = 4444;
+
+    private void requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (!Settings.canDrawOverlays(this)) {
+                MyApplication.floating=0;
+                changeDialog();
+            } else {
+                MyApplication.floating=1;
+            }
+        }
+    }
+
+    ChangeDialog dialog;
+
+    private void changeDialog() {
+        if (dialog != null && dialog.isShowing()) {
+            return;
+        }
+        dialog = new ChangeDialog(this);
+        dialog.setCanceledOnTouchOutside(false);
+
+
+        dialog.setMode(1);
+        dialog.setTitle("权限申请");
+        dialog.setTips("请打开悬浮窗权限!");
+
+        backgroundAlpha(0.4f);
+        dialog.setOnNegativeClickListener(new ChangeDialog.OnNegativeClickListener() {
+            @Override
+            public void onNegativeClick() {
+                dialog.dismiss();
+            }
+        });
+        dialog.setOnPositiveClickListener(new ChangeDialog.OnPositiveClickListener() {
+            @Override
+            public void onPositiveClick() {
+                dialog.dismiss();
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + getPackageName()));
+//                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivityForResult(intent, REQUEST_OVERLAY);
+            }
+        });
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                backgroundAlpha(1.0f);
+            }
+        });
+        dialog.show();
     }
 }

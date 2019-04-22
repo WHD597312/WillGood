@@ -13,6 +13,7 @@ public class Device implements Serializable {
     @Id(autoincrement = true)
     private Long id;
     private long deviceId;
+    private int userId;
     private String deviceName;
     private String deviceOnlyMac;
     private String devicePassword;
@@ -70,7 +71,6 @@ public class Device implements Serializable {
     private double votage;//电压
     private String re485;
 
-    private int userId;
     private int system;//操作系统，1为配电系统，2为操控系统
     @Transient
     private String lines;//提交给服务端的开关路线
@@ -118,12 +118,13 @@ public class Device implements Serializable {
     public Device() {
     }
 
-    @Generated(hash = 912413225)
-    public Device(Long id, long deviceId, String deviceName, String deviceOnlyMac, String devicePassword, int deviceSellerId, int deviceCreatorId, int deviceModel, int choice, String name, String imei, String share, int deviceAuthority_Alarm, int deviceAuthority_Map, int deviceAuthority_LineSwitch, int deviceAuthority_Analog, int deviceAuthority_Switch,
-            int deviceAuthority_Poweroff, int deviceAuthority_Inching, int deviceAuthority_Timer, int deviceAuthority_Lock, int deviceAuthority_Linked, int mcuVersion, int deviceState, int prelines, int lastlines, int prelineswitch, int lastlineswitch, int prelinesjog, int lastlinesjog, boolean online, int plMemory, double lineJog, double line, double line2,
-            double line3, double line4, double line5, double line6, double line7, double line8, double line9, double line10, double line11, double line12, double line13, double line14, double line15, double line16, double temp, double hum, double current, double votage, String re485, int userId, int system, int vlice2, int location) {
+    @Generated(hash = 836345813)
+    public Device(Long id, long deviceId, int userId, String deviceName, String deviceOnlyMac, String devicePassword, int deviceSellerId, int deviceCreatorId, int deviceModel, int choice, String name, String imei, String share, int deviceAuthority_Alarm, int deviceAuthority_Map, int deviceAuthority_LineSwitch, int deviceAuthority_Analog,
+            int deviceAuthority_Switch, int deviceAuthority_Poweroff, int deviceAuthority_Inching, int deviceAuthority_Timer, int deviceAuthority_Lock, int deviceAuthority_Linked, int mcuVersion, int deviceState, int prelines, int lastlines, int prelineswitch, int lastlineswitch, int prelinesjog, int lastlinesjog, boolean online, int plMemory, double lineJog,
+            double line, double line2, double line3, double line4, double line5, double line6, double line7, double line8, double line9, double line10, double line11, double line12, double line13, double line14, double line15, double line16, double temp, double hum, double current, double votage, String re485, int system, int vlice2, int location) {
         this.id = id;
         this.deviceId = deviceId;
+        this.userId = userId;
         this.deviceName = deviceName;
         this.deviceOnlyMac = deviceOnlyMac;
         this.devicePassword = devicePassword;
@@ -176,7 +177,6 @@ public class Device implements Serializable {
         this.current = current;
         this.votage = votage;
         this.re485 = re485;
-        this.userId = userId;
         this.system = system;
         this.vlice2 = vlice2;
         this.location = location;

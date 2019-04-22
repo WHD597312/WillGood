@@ -1,14 +1,16 @@
 package com.peihou.willgood.devicelist;
 
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.IBinder;
-import android.util.Log;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,46 +25,43 @@ import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.custom.ChangeDialog;
 import com.peihou.willgood.service.MQService;
 import com.peihou.willgood.util.ToastUtil;
+import com.peihou.willgood.util.http.BaseWeakAsyncTask;
+import com.peihou.willgood.util.http.HttpUtils;
+
+import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.OnClick;
 
 public class LocationSetActivity extends BaseActivity {
 
-    @BindView(R.id.tv_title)
-    TextView tv_title;//页面标题
-    @BindView(R.id.tv_default_time)
-    TextView tv_default_time;//地图默认刷新频率
-    @BindView(R.id.tv_jog_auto)
-    TextView tv_jog_auto;//清除运动轨迹
+    @BindView(R.id.tv_title) TextView tv_title;//页面标题
+    @BindView(R.id.tv_default_time) TextView tv_default_time;//地图默认刷新频率
+    @BindView(R.id.tv_jog_auto) TextView tv_jog_auto;//清除运动轨迹
     @BindView(R.id.cb)
     CheckBox cb;
-    @BindView(R.id.tv_1)
-    TextView tv_1;
-    @BindView(R.id.cb2)
-    CheckBox cb2;
-    @BindView(R.id.tv_2)
-    TextView tv_2;
-    @BindView(R.id.cb3)
-    CheckBox cb3;
-    @BindView(R.id.tv_3)
-    TextView tv_3;
-    @BindView(R.id.cb4)
-    CheckBox cb4;
-    @BindView(R.id.tv_4)
-    TextView tv_4;
-    @BindView(R.id.cb5)
-    CheckBox cb5;
-    @BindView(R.id.tv_5)
-    TextView tv_5;
-
-
-    String topicName;
+    @BindView(R.id.tv_1) TextView tv_1;
+    @BindView(R.id.cb2) CheckBox cb2;
+    @BindView(R.id.tv_2) TextView tv_2;
+    @BindView(R.id.cb3) CheckBox cb3;
+    @BindView(R.id.tv_3) TextView tv_3;
+    @BindView(R.id.cb4) CheckBox cb4;
+    @BindView(R.id.tv_4) TextView tv_4;
+    @BindView(R.id.cb5) CheckBox cb5;
+    @BindView(R.id.tv_5) TextView tv_5;
+    int mcuVersion;
     String deviceMac;
+    String topicName;
+    long deviceId;
 
     @Override
     public void initParms(Bundle parms) {
-        deviceMac = parms.getString("deviceMac");
+        deviceMac=parms.getString("deviceMac");
+        mcuVersion=parms.getInt("mcuVersion");
+        deviceId=parms.getLong("deviceId");
         choices=parms.getInt("location");
     }
 
@@ -71,15 +70,22 @@ public class LocationSetActivity extends BaseActivity {
         setSteepStatusBar(true);
         return R.layout.activity_location_set;
     }
-
+    Map<String, Object> params = new HashMap<>();
+    MessageReceiver receiver;
+    public static boolean running=false;
     @Override
     public void initView(View view) {
+        topicName="qjjc/gateway/"+deviceMac+"/server_to_client";
         tv_title.setText("地图设置");
         tv_default_time.setText("刷新频率");
         tv_jog_auto.setText("清除运动轨迹");
-        topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
-        Intent service = new Intent(this, MQService.class);
-        bind = bindService(service, connection, Context.BIND_AUTO_CREATE);
+        params.put("deviceId",deviceId);
+        Intent service=new Intent(this, MQService.class);
+
+        bind=bindService(service,connection,Context.BIND_AUTO_CREATE);
+        receiver=new MessageReceiver();
+        IntentFilter filter=new IntentFilter("LocationSetActivity");
+        registerReceiver(receiver,filter);
         setLocationFre();
     }
     private void setLocationFre(){
@@ -115,6 +121,119 @@ public class LocationSetActivity extends BaseActivity {
             cb5.setChecked(true);
         }
     }
+    boolean checked=false;
+    int choices=10;
+    boolean success=false;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        running=true;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        running=false;
+    }
+
+    int click=0;
+    @OnClick({R.id.img_back,R.id.rl_bottom,R.id.btn_submit,R.id.linear_1,R.id.linear_2,R.id.linear_3,R.id.linear_4,R.id.linear_5})
+    public void onClick(View v){
+        switch (v.getId()){
+            case R.id.img_back:
+                finish();
+                break;
+            case R.id.rl_bottom:
+                changeDialog();
+                break;
+            case R.id.btn_submit:
+                if (mqService!=null){
+                    success=mqService.sendLocation(topicName,mcuVersion,choices);
+                    if (success){
+                        click=1;
+                        countTimer.start();
+                    }else {
+                        ToastUtil.showShort(this,"提交失败");
+                    }
+                }
+                break;
+            case R.id.linear_1:
+                checked=cb.isChecked();
+                if (checked){
+                    cb.setChecked(false);
+                    choices=10;
+                }else {
+                    choices=10;
+                    cb.setChecked(true);
+                    cb2.setChecked(false);
+                    cb3.setChecked(false);
+                    cb4.setChecked(false);
+                    cb5.setChecked(false);
+                }
+                break;
+            case R.id.linear_2:
+                checked=cb2.isChecked();
+                if (checked){
+                    cb2.setChecked(false);
+
+                    choices=10;
+                }else {
+                    cb.setChecked(false);
+                    cb2.setChecked(true);
+                    cb3.setChecked(false);
+                    cb4.setChecked(false);
+                    cb5.setChecked(false);
+                    choices=20;
+
+                }
+                break;
+            case R.id.linear_3:
+                checked=cb3.isChecked();
+                if (checked){
+                    choices=10;
+                    cb3.setChecked(false);
+                }else {
+                    cb.setChecked(false);
+                    cb2.setChecked(false);
+                    cb3.setChecked(true);
+                    cb4.setChecked(false);
+                    cb5.setChecked(false);
+
+                    choices=30;
+                }
+                break;
+            case R.id.linear_4:
+                checked=cb4.isChecked();
+                if (checked){
+                    cb4.setChecked(false);
+                    choices=10;
+
+                }else {
+                    cb.setChecked(false);
+                    cb2.setChecked(false);
+                    cb3.setChecked(false);
+                    cb4.setChecked(true);
+                    cb5.setChecked(false);
+                    choices=60;
+                }
+                break;
+            case R.id.linear_5:
+                checked=cb5.isChecked();
+                if (checked){
+                    choices=10;
+                    cb5.setChecked(false);
+                }else {
+                    cb.setChecked(false);
+                    cb2.setChecked(false);
+                    cb3.setChecked(false);
+                    cb4.setChecked(false);
+                    cb5.setChecked(true);
+                    choices=120;
+                }
+                break;
+        }
+    }
 
     @Override
     protected void onDestroy() {
@@ -123,19 +242,43 @@ public class LocationSetActivity extends BaseActivity {
             popupWindow2.dismiss();
         }
 
-        if (bind) {
+        if (receiver!=null){
+            unregisterReceiver(receiver);
+        }
+        if (bind){
             unbindService(connection);
         }
     }
 
-    MQService mqService;
-    private boolean bind = false;
+    class MessageReceiver extends BroadcastReceiver{
 
-    ServiceConnection connection = new ServiceConnection() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String macAddress=intent.getStringExtra("macAddress");
+            try {
+                if (deviceMac.equals(macAddress)){
+                    int location=intent.getIntExtra("location",0);
+                    choices=location;
+//                    if (click==1){
+//                        click=0;
+//                        if(mqService!=null){
+//                            mqService.starSpeech(deviceMac,3);
+//                        }
+//                    }
+                    setLocationFre();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    private boolean bind=false;
+    MQService mqService;
+    ServiceConnection connection=new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            MQService.LocalBinder binder = (MQService.LocalBinder) service;
-            mqService = binder.getService();
+            MQService.LocalBinder binder= (MQService.LocalBinder) service;
+            mqService=binder.getService();
         }
 
         @Override
@@ -143,8 +286,85 @@ public class LocationSetActivity extends BaseActivity {
 
         }
     };
+    //自定义点动时间
+    ChangeDialog dialog;
+    private void changeDialog(){
+        if (dialog!=null && dialog.isShowing()){
+            return;
+        }
+        dialog=new ChangeDialog(this);
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.setMode(1);
+        dialog.setTips("是否清除运动轨迹?");
+        backgroundAlpha(0.4f);
+        dialog.setOnNegativeClickListener(new ChangeDialog.OnNegativeClickListener() {
+            @Override
+            public void onNegativeClick() {
+                dialog.dismiss();
+            }
+        });
+        dialog.setOnPositiveClickListener(new ChangeDialog.OnPositiveClickListener() {
+            @Override
+            public void onPositiveClick() {
+                dialog.dismiss();
+//                new DeleteDeviceTrajectoryaAsync(LocationSetActivity.this).execute(params);
+            }
+        });
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                backgroundAlpha(1.0f);
+            }
+        });
+        dialog.show();
+    }
+    class DeleteDeviceTrajectoryaAsync extends BaseWeakAsyncTask<Map<String,Object>,Void,Integer,LocationSetActivity> {
 
-    CountTimer countTimer = new CountTimer(2000, 1000);
+        public DeleteDeviceTrajectoryaAsync(LocationSetActivity locationSetActivity) {
+            super(locationSetActivity);
+        }
+
+        @Override
+        protected Integer doInBackground(LocationSetActivity locationSetActivity, Map<String, Object>... maps) {
+            Map<String,Object> params= null;
+            int code=0;
+            try {
+                params = maps[0];
+                String url= HttpUtils.ipAddress+"data/deleteDeviceTrajectory";
+                String result=HttpUtils.requestPost(url,params);
+                if (!TextUtils.isEmpty(result)){
+                    JSONObject jsonObject=new JSONObject(result);
+                    code=jsonObject.getInt("returnCode");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return code;
+        }
+
+        @Override
+        protected void onPostExecute(LocationSetActivity locationSetActivity, Integer integer) {
+            if (integer==100){
+                ToastUtil.showShort(LocationSetActivity.this,"清除成功");
+                setResult(1000);
+                finish();
+            }
+        }
+    }
+
+
+    //设置蒙版
+    private void backgroundAlpha(float f) {
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = f;
+        getWindow().setAttributes(lp);
+    }
+    @Override
+    public void doBusiness(Context mContext) {
+
+    }
+    CountTimer countTimer=new CountTimer(2000,1000);
 
     class CountTimer extends CountDownTimer {
 
@@ -166,14 +386,13 @@ public class LocationSetActivity extends BaseActivity {
 
         @Override
         public void onFinish() {
-            if (popupWindow2 != null && popupWindow2.isShowing()) {
+            if (popupWindow2!=null && popupWindow2.isShowing()){
                 popupWindow2.dismiss();
-                ToastUtil.showShort(LocationSetActivity.this, "提交成功");
+                ToastUtil.showShort(LocationSetActivity.this,"提交成功");
                 finish();
             }
         }
     }
-
     private PopupWindow popupWindow2;
 
     public void popupmenuWindow3() {
@@ -181,9 +400,9 @@ public class LocationSetActivity extends BaseActivity {
             return;
         }
         View view = View.inflate(this, R.layout.progress, null);
-        TextView tv_load = view.findViewById(R.id.tv_load);
+        TextView tv_load=view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        if (popupWindow2==null)
+
             popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
@@ -203,148 +422,4 @@ public class LocationSetActivity extends BaseActivity {
         //添加按键事件监听
     }
 
-    boolean checked = false;
-    int choices = 10;
-
-    @OnClick({R.id.img_back, R.id.rl_bottom, R.id.btn_submit, R.id.linear_1, R.id.linear_2, R.id.linear_3, R.id.linear_4, R.id.linear_5})
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.img_back:
-                finish();
-                break;
-            case R.id.rl_bottom:
-                changeDialog();
-                break;
-            case R.id.btn_submit:
-                if (mqService != null) {
-                    Log.i("topicNameLocation","-->"+topicName);
-                    boolean success = mqService.sendLocation(topicName, 0, choices);
-                    if (success) {
-                        countTimer.start();
-                    } else {
-                        ToastUtil.showShort(this, "提交失败");
-                    }
-                }
-                break;
-            case R.id.linear_1:
-                checked = cb.isChecked();
-                if (checked) {
-                    cb.setChecked(false);
-                    choices = 10;
-                } else {
-                    choices = 10;
-                    cb.setChecked(true);
-                    cb2.setChecked(false);
-                    cb3.setChecked(false);
-                    cb4.setChecked(false);
-                    cb5.setChecked(false);
-                }
-                break;
-            case R.id.linear_2:
-                checked = cb2.isChecked();
-                if (checked) {
-                    cb2.setChecked(false);
-
-                    choices = 10;
-                } else {
-                    cb.setChecked(false);
-                    cb2.setChecked(true);
-                    cb3.setChecked(false);
-                    cb4.setChecked(false);
-                    cb5.setChecked(false);
-                    choices = 20;
-
-                }
-                break;
-            case R.id.linear_3:
-                checked = cb3.isChecked();
-                if (checked) {
-                    choices = 10;
-                    cb3.setChecked(false);
-                } else {
-                    cb.setChecked(false);
-                    cb2.setChecked(false);
-                    cb3.setChecked(true);
-                    cb4.setChecked(false);
-                    cb5.setChecked(false);
-
-                    choices = 30;
-                }
-                break;
-            case R.id.linear_4:
-                checked = cb4.isChecked();
-                if (checked) {
-                    cb4.setChecked(false);
-                    choices = 10;
-
-                } else {
-                    cb.setChecked(false);
-                    cb2.setChecked(false);
-                    cb3.setChecked(false);
-                    cb4.setChecked(true);
-                    cb5.setChecked(false);
-                    choices = 60;
-                }
-                break;
-            case R.id.linear_5:
-                checked = cb5.isChecked();
-                if (checked) {
-                    choices = 10;
-                    cb5.setChecked(false);
-                } else {
-                    cb.setChecked(false);
-                    cb2.setChecked(false);
-                    cb3.setChecked(false);
-                    cb4.setChecked(false);
-                    cb5.setChecked(true);
-                    choices = 120;
-                }
-                break;
-        }
-    }
-
-    //自定义点动时间
-    ChangeDialog dialog;
-
-    private void changeDialog() {
-        if (dialog != null && dialog.isShowing()) {
-            return;
-        }
-        dialog = new ChangeDialog(this);
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.setMode(1);
-        dialog.setTips("是否清除运动轨迹?");
-        backgroundAlpha(0.4f);
-        dialog.setOnNegativeClickListener(new ChangeDialog.OnNegativeClickListener() {
-            @Override
-            public void onNegativeClick() {
-                dialog.dismiss();
-            }
-        });
-        dialog.setOnPositiveClickListener(new ChangeDialog.OnPositiveClickListener() {
-            @Override
-            public void onPositiveClick() {
-                dialog.dismiss();
-            }
-        });
-        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                backgroundAlpha(1.0f);
-            }
-        });
-        dialog.show();
-    }
-
-    //设置蒙版
-    private void backgroundAlpha(float f) {
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = f;
-        getWindow().setAttributes(lp);
-    }
-
-    @Override
-    public void doBusiness(Context mContext) {
-
-    }
 }

@@ -10,6 +10,7 @@ import com.peihou.willgood.database.dao.DaoSession;
 import com.peihou.willgood.database.dao.Line2Dao;
 import com.peihou.willgood.pojo.Line2;
 
+import org.greenrobot.greendao.identityscope.IdentityScopeType;
 import org.greenrobot.greendao.query.WhereCondition;
 
 import java.util.HashMap;
@@ -18,15 +19,11 @@ import java.util.Map;
 
 public class DeviceLineDaoImpl {
     private Context context;
-    private SQLiteDatabase db;
-    private DaoMaster master;
     private Line2Dao lineDao;
-    private DaoSession session;
     public DeviceLineDaoImpl(Context context) {
         this.context = context;
-        db= DBManager.getInstance(context).getWritableDasebase();
-        master=new DaoMaster(db);
-        session=master.newSession();
+        DBManager dbManager=DBManager.getInstance(context);//获取数据库管理者单例对象
+        DaoSession session=dbManager.getDaoSession();//获取数据库会话对象
         lineDao=session.getLine2Dao();
     }
     public void insert(Line2 line2){
@@ -148,6 +145,9 @@ public class DeviceLineDaoImpl {
         return lineDao.queryBuilder().where(whereCondition).list();
     }
 
+    public List<Line2> findDeviceLines(){
+        return lineDao.loadAll();
+    }
     public void deleteAll(){
         lineDao.deleteAll();
     }

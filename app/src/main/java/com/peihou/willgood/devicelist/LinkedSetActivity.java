@@ -134,12 +134,20 @@ public class LinkedSetActivity extends BaseActivity {
     public void doBusiness(Context mContext) {
 
     }
+
+    @Override
+    public void onBackPressed() {
+        setResult(1002);
+        super.onBackPressed();
+    }
+
     int[] pre = new int[8];
     int[] last = new int[8];
     @OnClick({R.id.img_back,R.id.btn_low,R.id.btn_high,R.id.btn_once,R.id.btn_loop,R.id.img_ensure,R.id.btn_open,R.id.btn_close})
     public void onClick(View view){
         switch (view.getId()){
             case R.id.img_back:
+                setResult(1002);
                 finish();
                 break;
             case R.id.img_ensure:

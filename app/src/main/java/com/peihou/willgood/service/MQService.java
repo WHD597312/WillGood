@@ -1,9 +1,9 @@
 package com.peihou.willgood.service;
 
-import android.annotation.SuppressLint;
+import android.app.KeyguardManager;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -11,33 +11,28 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.res.AssetFileDescriptor;
+import android.content.res.Configuration;
+import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Binder;
-import android.os.Bundle;
+import android.os.Build;
 import android.os.CountDownTimer;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.os.PowerManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.WindowManager;
-import android.widget.Toast;
 
-import com.baidu.mapapi.model.LatLng;
-import com.baidu.mapapi.utils.DistanceUtil;
 import com.google.gson.Gson;
-import com.iflytek.cloud.ErrorCode;
-import com.iflytek.cloud.InitListener;
-import com.iflytek.cloud.SpeechConstant;
-import com.iflytek.cloud.SpeechError;
-import com.iflytek.cloud.SpeechSynthesizer;
-import com.iflytek.cloud.SpeechUtility;
-import com.iflytek.cloud.SynthesizerListener;
+import com.peihou.willgood.R;
 import com.peihou.willgood.activity.MainActivity;
-import com.peihou.willgood.custom.WeakRefHandler;
+import com.peihou.willgood.base.MyApplication;
+import com.peihou.willgood.custom.AlermDialog4;
 import com.peihou.willgood.database.dao.impl.DeviceAlermDaoImpl;
 import com.peihou.willgood.database.dao.impl.DeviceDaoImpl;
 import com.peihou.willgood.database.dao.impl.DeviceLineDaoImpl;
@@ -48,6 +43,8 @@ import com.peihou.willgood.devicelist.AlermActivity;
 import com.peihou.willgood.devicelist.LinkItemActivity;
 import com.peihou.willgood.devicelist.LinkedControlActivity;
 import com.peihou.willgood.devicelist.LocationActivity;
+import com.peihou.willgood.devicelist.LocationSetActivity;
+import com.peihou.willgood.devicelist.PowerLostMomoryActivity;
 import com.peihou.willgood.devicelist.SwichCheckActivity;
 import com.peihou.willgood.devicelist.TimerTaskActivity;
 import com.peihou.willgood.pojo.Alerm;
@@ -62,6 +59,7 @@ import com.peihou.willgood.util.ToastUtil;
 import com.peihou.willgood.util.UUID;
 import com.peihou.willgood.util.http.BaseWeakAsyncTask;
 
+
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -75,26 +73,17 @@ import org.json.JSONObject;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class MQService extends Service {
 
@@ -119,14 +108,14 @@ public class MQService extends Service {
     private DeviceDaoImpl deviceDao;//设备别欧操作者
     private TimerTaskDaoImpl timerTaskDao;
 
-//    private DeviceAnalogDaoImpl deviceAnalogDao;
     private DeviceAlermDaoImpl deviceAlermDao;
     private DeviceLinkedTypeDaoImpl deviceLinkedTypeDao;//设备联动类型操作对象
     private DeviceLinkDaoImpl deviceLinkDao;//设备温度，湿度，开关量，电流，电压联动操作对象
-//    private DeviceMoniLinkDaoDaoImpl deviceMoniLinkDaoDao;//设备模拟量联动操纵对象
+
     private List<Line2> lines = new ArrayList<>();//线路集合
     StringBuffer sb = new StringBuffer();
     SpeechReceiver reciiver;//语音播报广播
+    MediaPlayer mediaPlayer;
 
     SharedPreferences preferences;
     int userId;
@@ -143,11 +132,12 @@ public class MQService extends Service {
         super.onCreate();
 
         // 初始化即创建语音配置对象，只有初始化后才可以使用MSC的各项服务
-        SpeechUtility.createUtility(this, SpeechConstant.APPID + "=5c73ac21");
+//        SpeechUtility.createUtility(this, SpeechConstant.APPID + "=5c73ac21");
+//
+//        mTts = SpeechSynthesizer.createSynthesizer(this,
+//                mTtsInitListener);
 
-        mTts = SpeechSynthesizer.createSynthesizer(this,
-                mTtsInitListener);
-
+        mediaPlayer = new MediaPlayer();
         Log.i(TAG, "onCreate");
         clientId = UUID.getUUID(this);
         Log.i("clientId", "-->" + clientId);
@@ -173,14 +163,14 @@ public class MQService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent!=null && intent.hasExtra("restart")){
-            int restart=intent.getIntExtra("restart",0);
-            Log.i("restart","-->"+restart);
-            if (restart==1){
+        if (intent != null && intent.hasExtra("restart")) {
+            int restart = intent.getIntExtra("restart", 0);
+            Log.i("restart", "-->" + restart);
+            if (restart == 1) {
                 connect(1);
             }
         }
-        return super.onStartCommand(intent, flags, startId);
+        return START_STICKY;
     }
 
     public class LocalBinder extends Binder {
@@ -212,7 +202,7 @@ public class MQService extends Service {
             if (client != null && client.isConnected() == false) {
                 client.connect(options);
             }
-            if (state==1) {
+            if (state == 1) {
                 new ConAsync(MQService.this).execute();
                 countTime2.start();
             }
@@ -222,6 +212,7 @@ public class MQService extends Service {
     }
 
     public void clearAllData() {
+        unsubscribeAll(deviceDao.findAllDevice());
         deviceDao.deleteAll();
         deviceLineDao.deleteAll();
         timerTaskDao.deleteAll();
@@ -230,6 +221,7 @@ public class MQService extends Service {
         deviceAlermDao.deleteAll();
         alerms.clear();
         moniMap.clear();
+        countTimers.clear();
         removeOfflineDevices();
     }
 
@@ -250,6 +242,20 @@ public class MQService extends Service {
     }
 
 
+
+    public void updateLines(String deviceMac) {
+        List<Line2> list = deviceLineDao.findDeviceLines(deviceMac);
+        for (int i = 0; i < list.size(); i++) {
+            Line2 line2 = list.get(i);
+            line2.setLock(0);
+            line2.setClick2(0);
+            line2.setClick(0);
+            line2.setOnClick(false);
+            list.set(i, line2);
+        }
+        deviceLineDao.update(list);
+    }
+
     class ConAsync extends BaseWeakAsyncTask<Void, Void, Void, MQService> {
 
         public ConAsync(MQService mqService) {
@@ -264,7 +270,7 @@ public class MQService extends Service {
                     client.connect(options);
                 }
                 List<String> topicNames = getTopicNames();
-                Log.i("ConAsync","-->"+topicNames.size());
+                Log.i("ConAsync", "-->" + topicNames.size());
                 if (client.isConnected() && !topicNames.isEmpty()) {
                     for (String topicName : topicNames) {
                         if (!TextUtils.isEmpty(topicName)) {
@@ -285,24 +291,30 @@ public class MQService extends Service {
         }
     }
 
-    public void connectMqtt(String deviceMac){
+    public void connectMqtt(String deviceMac) {
         try {
-            if (client!=null && !client.isConnected()){
+            if (client != null && !client.isConnected()) {
                 client.connect(options);
             }
             String server = "qjjc/gateway/" + deviceMac + "/client_to_server";
             String lwt = "qjjc/gateway/" + deviceMac + "/lwt";
 
-            if (client.isConnected()){
-                subscribe(server,1);
-                subscribe(lwt,1);
+            if (client.isConnected()) {
+                subscribe(server, 1);
+                subscribe(lwt, 1);
                 String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
-                getData(topicName,0x11);
+                getData(topicName, 0x11);
             }
         } catch (MqttException e) {
             e.printStackTrace();
         }
     }
+
+    /**
+     * 订阅所有的设备主题
+     *
+     * @param devices
+     */
     public void subscribeAll(List<Device> devices) {
         try {
             for (Device device : devices) {
@@ -318,26 +330,23 @@ public class MQService extends Service {
         }
     }
 
-    private String result;
+    public void unsubscribeAll(List<Device> devices) {
+        try {
+            for (Device device : devices) {
+                String deviceMac = device.getDeviceOnlyMac();
+                String server = "qjjc/gateway/" + deviceMac + "/client_to_server";
+                String lwt = "qjjc/gateway/" + deviceMac + "/lwt";
+                unsubscribe(server);
+                unsubscribe(lwt);
+                Log.i("subscribeAll", "-->" + server);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     Map<String, Object> operateLog = new HashMap<>();
-    private Map<String, Object> params = new HashMap<>();
-
-
-    private Map<String, Device> offlineDevices = new LinkedHashMap<>();
-
-    public Map<String, Device> getOfflineDevices() {
-        return offlineDevices;
-    }
-
-    public void removeOfflineDevices() {
-        offlineDevices.clear();
-    }
-
-    public void revoveOfflineDevice(String macAddress) {
-        if (offlineDevices.containsKey(macAddress))
-            offlineDevices.remove(macAddress);
-    }
 
     /**
      * 初始化MQTT
@@ -393,7 +402,9 @@ public class MQService extends Service {
                         params.put("bytes", bytes);
                         Log.i("topicNamehhhhhhhhh", "-->" + topicName);
                         if (topicName.contains("client_to_server")) {
-                            new LoadAsyncTask(MQService.this).execute(params);
+//                            if (NoFastClickUtils.isFastClick2()) {
+                            new LoadAsyncTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params);
+//                            }
                         } else if (topicName.contains("lwt")) {
                             String macAddress = topicName.substring(13, topicName.lastIndexOf("/"));
                             Device device = deviceDao.findDeviceByMac(macAddress);
@@ -429,6 +440,7 @@ public class MQService extends Service {
     }
 
 
+
     List<Alerm> alerms = new ArrayList<>();
     int[] moniLinkSwitch = new int[8];
 
@@ -442,38 +454,98 @@ public class MQService extends Service {
     public List<Linked> getLinkeds(String deviceMac, int type) {
         return deviceLinkDao.findLinkeds(deviceMac, type);
     }
-    int[] alermData=new int[17];
-    public int[] getAlermData(){
-        return alermData;
-    }
-    public void initAlarmData(){
-        for (int i = 0; i <alermData.length ; i++) {
-            alermData[i]=0;
-        }
-    }
-    public void updateDevice(Device device) {
-        deviceDao.update(device);
-    }
-    public List<Device> getDevices(){
-        return deviceDao.findAllDevice();
+
+    /**
+     * 离线设备集合
+     */
+    private Map<String, Device> offlineDevices = new LinkedHashMap<>();
+
+    /**
+     * 获取离线设备集合
+     *
+     * @return
+     */
+    public Map<String, Device> getOfflineDevices() {
+        return offlineDevices;
     }
 
     /**
+     * 清除离线设备集合
+     */
+    public void removeOfflineDevices() {
+        offlineDevices.clear();
+    }
+
+    /**
+     * 移除某个离线设备
+     *
+     * @param macAddress
+     */
+    public void revoveOfflineDevice(String macAddress) {
+        if (offlineDevices.containsKey(macAddress))
+            offlineDevices.remove(macAddress);
+    }
+
+    /**
+     * 更新设备
+     *
+     * @param device
+     */
+    public void updateDevice(Device device) {
+        deviceDao.update(device);
+    }
+
+    /**
+     * 获取设备
+     *
+     * @param deviceMac
+     * @return
+     */
+    public Device getDeviceByMac(String deviceMac) {
+        return deviceDao.findDeviceByMac(deviceMac);
+    }
+
+    /**
+     * 更新设备的控制声音
+     *
+     * @param deviceMac
+     * @param vloce
+     */
+    public void updateDevice(String deviceMac, int vloce) {
+        Device device = deviceDao.findDeviceByMac(deviceMac);
+        if (device != null) {
+            device.setVlice2(vloce);
+            deviceDao.update(device);
+        }
+    }
+
+    /**
+     * 更新报警
+     *
+     * @param alerm
+     */
+    public void update(Alerm alerm) {
+        deviceAlermDao.update(alerm);
+    }
+
+    /**
+     * 获取所有设备
+     *
+     * @return
+     */
+    public List<Device> getDevices() {
+        return deviceDao.findAllDevice();
+    }
+
+    int moniSize=0;
+    /**
      * 处理mqtt接收到的消息
      */
-    class LoadAsyncTask extends BaseWeakAsyncTask<Map<String, Object>, Void, Object, MQService> {
-        public LoadAsyncTask(MQService mqService) {
-            super(mqService);
-        }
+    class LoadAsyncTask extends AsyncTask<Map<String, Object>, Void, Object> {
 
 
         @Override
-        protected void onPostExecute(MQService mqService, Object o) {
-
-        }
-
-        @Override
-        protected Object doInBackground(MQService mqService, Map<String, Object>... maps) {
+        protected Object doInBackground(Map<String, Object>... maps) {
 
             Map params = maps[0];
             String topicName = (String) params.get("topicName");
@@ -489,7 +561,9 @@ public class MQService extends Service {
                 }
             }
 
-
+//            if (sum2 == 0) {
+//                return null;
+//            }
             int check = sum % 256;
             if (check != data[data.length - 2]) {
                 return null;
@@ -520,6 +594,9 @@ public class MQService extends Service {
             Device device = null;
             double latitude = 0;
             double longitude = 0;
+            CountTimer countTimer2 = null;
+            int location = 0;
+            int plMemory = 0;
             try {
                 if (topicName.contains("client_to_server")) {
                     int funCode = data[1];
@@ -540,7 +617,7 @@ public class MQService extends Service {
                             int lastlineswitch = data[8];//后8路开关
                             int prelinesjog = data[9];//前8路点动
                             int lastlinesjog = data[10];//后8路点动
-                            int plMemory = data[11];
+                            plMemory = data[11];
 
 
                             int lineHigh = data[12];
@@ -612,14 +689,13 @@ public class MQService extends Service {
                             int[] x4 = TenTwoUtil.changeToTwo(lastlineswitch);
                             int[] x5 = TenTwoUtil.changeToTwo(prelinesjog);
                             int[] x6 = TenTwoUtil.changeToTwo(lastlinesjog);
-                            long deviceId = device.getDeviceId();
                             List<Line2> line2List = deviceLineDao.findDeviceLines(macAddress);
                             if (line2List.isEmpty()) {
-                                List<Line2> list2 = deviceLineDao.findDeviceLines(deviceId);
+                                List<Line2> list2 = deviceLineDao.findDeviceLines(macAddress);
                                 if ((list2 != null && list2.size() != 16)) {
                                     deviceLineDao.deleteDeviceLines(list2);
                                     for (int i = 1; i <= 16; i++) {
-                                        Line2 line21 = new Line2(false, "线路", 0, false, i, macAddress);
+                                        Line2 line21 = new Line2(false, i + "路", 0, false, i, macAddress);
                                         line2List.add(line21);
                                     }
                                     deviceLineDao.insertDeviceLines(line2List);
@@ -662,13 +738,13 @@ public class MQService extends Service {
                                         }
                                     }
                                     if (i < 8) {
-                                        if (x5[i] == 0) {
+                                        if (x5[i] == 1) {
                                             line21.setJog(true);
                                         } else {
                                             line21.setJog(false);
                                         }
                                     } else if (i >= 8) {
-                                        if (x6[i - 8] == 0) {
+                                        if (x6[i - 8] == 1) {
                                             line21.setJog(true);
                                         } else {
                                             line21.setJog(false);
@@ -685,7 +761,6 @@ public class MQService extends Service {
                             device.setLastlineswitch(lastlineswitch);
                             device.setPrelinesjog(prelinesjog);
                             device.setLastlinesjog(lastlinesjog);
-//                            device.setPlMemory(plMemory);
                             device.setLine(line);
                             device.setLine2(line2);
                             device.setLine3(line3);
@@ -706,24 +781,31 @@ public class MQService extends Service {
                             device.setHum(hum);
                             device.setCurrent(current);
                             device.setVotage(voltage);
-//                            device.setPlMemory(plMemory);
+                            device.setPlMemory(plMemory);
                             device.setOnline(true);
                             deviceDao.update(device);
                             offlineDevices.put(macAddress, device);
-                            Message msg = handler.obtainMessage();
-                            CountTimer countTimer2=null;
-                            for (CountTimer countTimer:countTimers){
-                                if (countTimer.getMacArress().equals(macAddress) && countTimer.getMillisUntilFinished()<=1){
-                                    countTimer2=countTimer;
-                                    break;
+
+
+                            lines2 = sb.toString() + "";
+                            if (!TextUtils.isEmpty(lines2)) {
+                                char ch = lines2.charAt(lines2.length() - 1);
+                                if (',' == ch) {
+                                    lines2 = lines2.substring(0, lines2.length() - 1);
                                 }
-                            }
-                            if (countTimer2!=null){
-                                msg.obj = countTimer2;
-                                msg.what = 101;
-                                handler.sendMessage(msg);
+                            } else {
+                                lines2 = "";
                             }
                         }
+
+
+                        for (CountTimer countTimer : countTimers) {
+                            if (macAddress.equals(countTimer.getMacArress()) && countTimer.getMillisUntilFinished() <= 1) {
+                                countTimer2 = countTimer;
+                                break;
+                            }
+                        }
+
                     } else if (funCode == 0x22) {
                         int mcuVersion = data[2];
                         int choice = data[4];
@@ -774,10 +856,10 @@ public class MQService extends Service {
                                 timerTaskDao.delete(timerTask);
                                 operateState = 1;
                             }
-                        } else if (state==5){
+                        } else if (state == 5) {
                             timerTaskDao.deleteTimers(macAddress);
                             operateState = 1;
-                        }else {
+                        } else {
                             if (timerTask == null) {
                                 operateState = 0;
                                 if (choice == 0x11) {
@@ -885,6 +967,7 @@ public class MQService extends Service {
                             linkedTypes.add(new LinkedType(macAddress, 2, "开关量联动", mcuVersion, 0));
                             linkedTypes.add(new LinkedType(macAddress, 3, "电流联动", mcuVersion, 0));
                             linkedTypes.add(new LinkedType(macAddress, 4, "电压联动", mcuVersion, 0));
+//                            linkedTypes.add(new LinkedType(macAddress, 5, "模拟量联动", mcuVersion, 0));
                             deviceLinkedTypeDao.insertLinkedTypes(linkedTypes);
                         }
                         for (int i = 0; i < 5; i++) {
@@ -947,7 +1030,7 @@ public class MQService extends Service {
                         int state = data[8];//联动状态 0关闭 1打开 2删除
                         if (type == 2) {
                             linked = deviceLinkDao.findLinked(macAddress, triState, preLines, lastLines, triType, switchLine);
-                        }else {
+                        } else {
                             linked = deviceLinkDao.findLinked(macAddress, type, condition, triState, preLines, lastLines, triType);
                         }
                         if (state == 4) {
@@ -965,10 +1048,10 @@ public class MQService extends Service {
                                 deviceLinkDao.delete(linked);
                                 operateState = 1;
                             }
-                        }else if (state==5){
+                        } else if (state == 5) {
                             deviceLinkDao.deleteLinekeds(macAddress);
                             operateState = 1;
-                        }else {
+                        } else {
                             if (linked == null) {
                                 lines.clear();
                                 lines = deviceLineDao.findDeviceLines(macAddress);
@@ -999,22 +1082,22 @@ public class MQService extends Service {
                                 } else {
                                     lines = "";
                                 }
-                                List<Linked> linkeds = deviceLinkDao.findLinkeds(macAddress, type);
-                                int size = linkeds.size() + 1;
+
+
                                 String name = "";
                                 if (type == 0) {
-                                    name = "温度" + size;
+                                    name = "温度";
                                 } else if (type == 1) {
-                                    name = "湿度" + size;
+                                    name = "湿度";
                                 } else if (type == 2) {
                                     switchLine = data[9];
-                                    name = "开关量" + size;
                                 } else if (type == 3) {
-                                    name = "电流" + size;
+                                    name = "电流" ;
                                 } else if (type == 4) {
-                                    name = "电压" + size;
+                                    name = "电压";
                                 }
                                 if (type == 2) {
+
                                     operateState = 0;
                                     name = "开关量" + switchLine;
                                     linked = new Linked(macAddress, type, name, condition, conditionState, 1, preLines, lastLines, triType);
@@ -1025,6 +1108,7 @@ public class MQService extends Service {
                                     linked = new Linked(macAddress, type, name, condition, triState, conditionState, 1, preLines, lastLines, triType);
                                     linked.setVisitity(1);
                                 }
+
                                 linked.setLines(lines);
                                 deviceLinkDao.insert(linked);
                             } else {
@@ -1057,8 +1141,20 @@ public class MQService extends Service {
                                 } else {
                                     lines = "";
                                 }
+                                String name = "";
+                                if (type == 0) {
+                                    name = "温度";
+                                } else if (type == 1) {
+                                    name = "湿度";
+                                } else if (type == 2) {
+                                    switchLine = data[9];
+                                } else if (type == 3) {
+                                    name = "电流";
+                                } else if (type == 4) {
+                                    name = "电压";
+                                }
 
-
+                                linked.setName(name);
                                 linked.setLines(lines);
                                 linked.setCondition(condition);
                                 linked.setConditionState(conditionState);
@@ -1069,8 +1165,8 @@ public class MQService extends Service {
                                 linked.setState(state);
                                 linked.setVisitity(1);
                                 if (type == 2) {
-                                    String name = "开关量" + switchLine;
-                                    linked.setName(name);
+                                    String name2 = "开关量" + switchLine;
+                                    linked.setName(name2);
                                 }
                                 deviceLinkDao.update(linked);
                             }
@@ -1081,7 +1177,141 @@ public class MQService extends Service {
                         int link = data[4];
                         moniLinkSwitch = TenTwoUtil.changeToTwo(link);
                         moniMap.put(macAddress, moniLinkSwitch);
-                    }  else if (funCode == 0x44 && data.length == 13) {
+                    } else if (funCode == 0x39) {
+//                        int mcuVersion = data[2];
+//                        int contition = data[4];
+//                        int preLine = data[5];
+//                        int lastLine = data[6];
+//                        int triType2 = data[7];
+//                        int state = data[8];
+//                        Log.i("statesssssssssssss", "-->" + state);
+//                        if (state == 3) {
+//                            Log.i("statesssssssssssss", "-->sssssss");
+//                            return null;
+//                        }
+//                        int type = -1;
+//                        int num = -1;
+//                        int triState = 0;
+//                        int controlState = 0;
+//                        int controlType = data[9];
+//
+//                        String name = "";
+//                        if (controlType == 0x11) {
+//                            type = 0;
+//                            num = 0;
+//                            name = "电流1";
+//                        } else if (controlType == 0x22) {
+//                            type = 0;
+//                            num = 1;
+//                            name = "电流2";
+//                        } else if (controlType == 0x33) {
+//                            type = 0;
+//                            num = 2;
+//                            name = "电流3";
+//                        } else if (controlType == 0x44) {
+//                            type = 0;
+//                            num = 3;
+//                            name = "电流4";
+//                        } else if (controlType == 0x55) {
+//                            type = 1;
+//                            num = 0;
+//                            name = "电压1";
+//                        } else if (controlType == 0x66) {
+//                            type = 1;
+//                            num = 1;
+//                            name = "电压2";
+//                        } else if (controlType == 0x77) {
+//                            type = 1;
+//                            num = 2;
+//                            name = "电压3";
+//                        } else if (controlType == 0x88) {
+//                            type = 1;
+//                            num = 3;
+//                            name = "电压4";
+//                        }
+//                        if (state == 4) {
+//                            Message msg = handler.obtainMessage();
+//                            msg.what = 10001;
+//                            msg.obj = "模拟量联动" + name + "已达上限";
+//                            handler.sendMessage(msg);
+//                            return null;
+//                        }
+//
+//                        moniType = type;
+//                        linkTypeNum = num;
+//                        linkType = 5;
+//                        int[] x = TenTwoUtil.changeToTwo(triType2);
+//                        if (x[0] == 1 && x[1] == 1) {
+//                            triState = 1;
+//                        } else if (x[0] == 1 && x[1] == 0) {
+//                            triState = 0;
+//                        }
+//                        if (x[2] == 1 && x[3] == 1) {
+//                            controlState = 1;
+//                        } else if (x[2] == 1 && x[3] == 0) {
+//                            controlState = 0;
+//                        }
+//                        int triType = x[4];
+//                        MoniLink moniLink = deviceMoniLinkDaoDao.findMoniLink(macAddress, type, num, contition, triState, preLine, lastLine, triType);
+//
+//                        if (state == 2) {
+//                            if (moniLink != null) {
+//                                deviceMoniLinkDaoDao.delete(moniLink);
+//                                operateState = 1;
+//                            }
+//                        } else if (state == 5) {
+//                            deviceMoniLinkDaoDao.deletes(macAddress);
+//                            operateState = 1;
+//                        } else {
+//                            List<MoniLink> moniLinks = deviceMoniLinkDaoDao.findMoniLinks(macAddress, type, num);
+//
+//                            lines.clear();
+//                            lines = deviceLineDao.findDeviceLines(macAddress);
+//                            int[] pre = TenTwoUtil.changeToTwo(preLine);
+//                            int[] last = TenTwoUtil.changeToTwo(lastLine);
+//                            sb.setLength(0);
+//                            for (int i = 0; i < lines.size(); i++) {
+//                                Line2 line2 = lines.get(i);
+//                                String name2 = line2.getName();
+//                                if (i < 8) {
+//                                    int checked = pre[i];
+//                                    if (checked == 1) {
+//                                        sb.append(name2 + ",");
+//                                    }
+//                                } else if (i >= 8) {
+//                                    int checked = last[i - 8];
+//                                    if (checked == 1) {
+//                                        sb.append(name2 + ",");
+//                                    }
+//                                }
+//                            }
+//                            String lines = sb.toString() + "";
+//                            if (!TextUtils.isEmpty(lines)) {
+//                                char ch = lines.charAt(lines.length() - 1);
+//                                if (',' == ch) {
+//                                    lines = lines.substring(0, lines.length() - 1);
+//                                }
+//                            } else {
+//                                lines = "";
+//                            }
+//                            if (moniLink == null && state==1) {
+//                                moniLink = new MoniLink(name, type, num, contition, triState, preLine, lastLine, controlState, triType, state, controlType, macAddress, mcuVersion);
+//                                moniLink.setLines(lines);
+//                                moniLink.setVisitity(1);
+//                                deviceMoniLinkDaoDao.insert(moniLink);
+//                                operateState = 0;
+//                            } else if (moniLink != null && state ==1) {
+//                                moniLink.setName(name);
+//                                moniLink.setLines(lines);
+//                                moniLink.setState(state);
+//                                moniLink.setControlState(controlState);
+//                                moniLink.setTriType(triType);
+//                                moniLink.setVisitity(1);
+//                                deviceMoniLinkDaoDao.update(moniLink);
+//                                operateState = 0;
+//                            }
+//                        }
+                    } else if (funCode == 0x44 && data.length == 13) {
                         int jogHigh = data[4];
                         int jogLow = data[5];
 
@@ -1094,7 +1324,61 @@ public class MQService extends Service {
                             deviceDao.update(device2);
                             device = device2;
                         }
-                    }  else if (funCode == 0x55) {
+                    } else if (funCode == 0x46) {
+//                        int mcuVersion = data[2];
+//                        map.clear();
+//
+//                        List<InterLock> interLocks = deviceInterLockDao.findDeviceInterLock(macAddress);
+//                        if (interLocks.size() != 8) {
+//                            deviceInterLockDao.deletes(macAddress);
+//                            List<InterLock> lockList = new ArrayList<>();
+//                            for (int i = 1; i <= 8; i++) {
+//                                lockList.add(new InterLock(macAddress, i));
+//                            }
+//                            deviceInterLockDao.inserts(lockList);
+//                        }
+//                        List<Line2> line2List = deviceLineDao.findDeviceLines(macAddress);
+//                        for (Line2 line2 : line2List) {
+//                            line2.setLock(0);
+//                            line2.setOnClick(false);
+//                            deviceLineDao.update(line2);
+//                        }
+//                        int j = 1;
+//                        for (int i = 4; i < 20; i += 2) {
+//                            int interLock = data[i];
+//                            int interLock2 = data[i + 1];
+//                            if (interLock == 0 && interLock2 == 0) {
+//                                InterLock interLock3 = deviceInterLockDao.findDeviceInterLock(macAddress, j);
+//                                interLock3.setVisitity(0);
+//                                deviceInterLockDao.update(interLock3);
+//                                j++;
+//                                continue;
+//                            }
+//
+//                            Line2 line = deviceLineDao.findDeviceLine(macAddress, interLock);
+//                            Line2 line2 = deviceLineDao.findDeviceLine(macAddress, interLock2);
+//
+//                            if (line != null && line2 != null) {
+//                                line.setLock(1);
+//                                line2.setLock(1);
+//                                String name = line.getName();
+//                                String name2 = line2.getName();
+//                                InterLock interLock3 = deviceInterLockDao.findDeviceInterLock(macAddress, j);
+//                                interLock3.setVisitity(1);
+//                                interLock3.setName(name);
+//                                interLock3.setName2(name2);
+//                                interLock3.setDeviceLineNum(interLock);
+//                                interLock3.setDeviceLineNum2(interLock2);
+//                                deviceInterLockDao.update(interLock3);
+//                                deviceLineDao.update(line);
+//                                deviceLineDao.update(line2);
+//
+//                                j++;
+//                            }
+//                        }
+//
+
+                    } else if (funCode == 0x55) {
                         switchCheck = data[4];
                         switchCheck2 = data[5];
                         int[] x = TenTwoUtil.changeToTwo(switchCheck);
@@ -1207,8 +1491,20 @@ public class MQService extends Service {
                         int powerState = data[19];
                         int switchState = data[20];
                         int[] x = TenTwoUtil.changeToTwo(type);
-                        for (int i = 4; i <data.length-8; i++) {
-                            alermData[i-4]=data[i];
+                        List<Alerm> list = deviceAlermDao.findDeviceAlerms(macAddress);
+
+                        if (list.size() != 8) {
+                            deviceAlermDao.deleteDeviceAlerms(macAddress);
+                            Device device2 = deviceDao.findDeviceByMac(macAddress);
+                            list.add(new Alerm("来电报警", 0, "设备已来电!", false, macAddress, 0));
+                            list.add(new Alerm("断电报警", 1, "设备已断电,请及时处理", false, macAddress, 0));
+                            list.add(new Alerm("温度报警", 2, "温度报警,请注意", false, macAddress, 0));
+                            list.add(new Alerm("湿度报警", 3, "湿度报警,请注意", false, macAddress, 0));
+                            list.add(new Alerm("电压报警", 4, "电压报警,请注意", false,  macAddress, 0));
+                            list.add(new Alerm("电流报警", 5, "电流报警,请注意", false, macAddress, 0));
+                            list.add(new Alerm("功率报警", 6, "功率报警,请注意", false, macAddress, 0));
+                            list.add(new Alerm("开关量报警", 7, "开关量报警,请注意", false, macAddress, 50));
+                            deviceAlermDao.insertDeviceAlerms(list);
                         }
                         Alerm alerm = deviceAlermDao.findDeviceAlerm(macAddress, 0);//来电报警
                         Alerm alerm2 = deviceAlermDao.findDeviceAlerm(macAddress, 1);//断电报警
@@ -1219,7 +1515,9 @@ public class MQService extends Service {
                         Alerm alerm7 = deviceAlermDao.findDeviceAlerm(macAddress, 6);//功率报警
                         Alerm alerm8 = deviceAlermDao.findDeviceAlerm(macAddress, 7);//开关量报警
 
-
+                        for (int i = 4; i < data.length - 8; i++) {
+                            alermData[i - 4] = data[i];
+                        }
                         alerm.setState(x[0]);
                         alerm2.setState(x[1]);
                         alerm3.setState(x[2]);
@@ -1273,18 +1571,18 @@ public class MQService extends Service {
                             }
                         });
                     } else if (funCode == 0x77) {
-                        int location=data[4];
+                        location = data[4];//地图定位刷新频率
                         int symbol = data[6];
                         int[] x = TenTwoUtil.changeToTwo(symbol);
                         int x1 = x[0];
                         int x2 = x[1];
                         int x3 = x[2];
                         int x4 = x[3];
-                        if (location==10 || location==20 || location==30 || location==60 || location==120){
+                        device = deviceDao.findDeviceByMac(macAddress);
+                        if (location == 10 || location == 20 || location == 30 || location == 60 || location == 120) {
                             device.setLocation(location);
                             deviceDao.update(device);
                         }
-
                         String s = "";
                         if (x1 == 1 && x2 == 0 && x3 == 1 && x4 == 0) {
 
@@ -1328,58 +1626,161 @@ public class MQService extends Service {
                         latitude = Double.parseDouble(s1);
                         longitude = Double.parseDouble(s2);
 
-                    }  else if (funCode == 0x99) {
+                    } else if (funCode == 0x88) {
+//                        int mcuVerion = data[2];
+//                        int moniInteger = data[4];
+//                        int moniDeci = data[5];
+//                        int moni2Integer = data[6];
+//                        int moni2Deci = data[7];
+//                        int moni3Integer = data[8];
+//                        int moni3Deci = data[9];
+//                        int moni4Integer = data[10];
+//                        int moni4Deci = data[11];
+//                        int moni5Integer = data[12];
+//                        int moni5Deci = data[13];
+//                        int moni6Integer = data[14];
+//                        int moni6Deci = data[15];
+//                        int moni7Integer = data[16];
+//                        int moni7Deci = data[17];
+//                        int moni8Integer = data[18];
+//                        int moni8Deci = data[19];
+//
+//                        double moni = Double.parseDouble(moniInteger + "." + moniDeci);
+//                        double moni2 = Double.parseDouble(moni2Integer + "." + moni2Deci);
+//                        double moni3 = Double.parseDouble(moni3Integer + "." + moni3Deci);
+//                        double moni4 = Double.parseDouble(moni4Integer + "." + moni4Deci);
+//                        double moni5 = Double.parseDouble(moni5Integer + "." + moni5Deci);
+//                        double moni6 = Double.parseDouble(moni6Integer + "." + moni6Deci);
+//                        double moni7 = Double.parseDouble(moni7Integer + "." + moni7Deci);
+//                        double moni8 = Double.parseDouble(moni8Integer + "." + moni8Deci);
+//                        Table table = deviceAnalogDao.findDeviceAnalog(macAddress, 1);
+//
+//                        table.setData(moni);
+//                        Table table2 = deviceAnalogDao.findDeviceAnalog(macAddress, 2);
+//                        table2.setData(moni2);
+//                        Table table3 = deviceAnalogDao.findDeviceAnalog(macAddress, 3);
+//                        table3.setData(moni3);
+//                        Table table4 = deviceAnalogDao.findDeviceAnalog(macAddress, 4);
+//                        table4.setData(moni4);
+//                        Table table5 = deviceAnalogDao.findDeviceAnalog(macAddress, 5);
+//                        table5.setData(moni5);
+//                        Table table6 = deviceAnalogDao.findDeviceAnalog(macAddress, 6);
+//                        table6.setData(moni6);
+//                        Table table7 = deviceAnalogDao.findDeviceAnalog(macAddress, 7);
+//                        table7.setData(moni7);
+//                        Table table8 = deviceAnalogDao.findDeviceAnalog(macAddress, 8);
+//                        table8.setData(moni8);
+//                        list.clear();
+//                        list.add(table);
+//                        list.add(table2);
+//                        list.add(table3);
+//                        list.add(table4);
+//                        list.add(table5);
+//                        list.add(table6);
+//                        list.add(table7);
+//                        list.add(table8);
+//                        deviceAnalogDao.updates(list);
+//
+//                        Collections.sort(list, new Comparator<Table>() {
+//                            @Override
+//                            public int compare(Table o1, Table o2) {
+//                                if (o1.getI() > o2.getI())
+//                                    return 1;
+//                                else if (o1.getI() < o2.getI())
+//                                    return -1;
+//                                return 0;
+//                            }
+//                        });
+                    } else if (funCode == 0x99) {
                         int type = 0;
                         int alermType = data[4];
                         int deviceControll = 0;
                         if (alermType == 0x11) {
                             deviceControll = 1;
                             type = 0;
+//                            content="设备已来电！";
                         } else if (alermType == 0x22) {
                             deviceControll = 2;
-                            type = 2;
+                            type = 1;
+//                            content="设备已断电!";
                         } else if (alermType == 0x33) {
                             deviceControll = 3;
                             type = 2;
+//                            content="温度报警,请注意";
                         } else if (alermType == 0x44) {
                             deviceControll = 4;
                             type = 3;
+//                            content="湿度报警,请注意";
                         } else if (alermType == 0x55) {
                             deviceControll = 5;
                             type = 4;
+//                            content="电压报警,请注意";
                         } else if (alermType == 0x66) {
                             deviceControll = 6;
                             type = 5;
+//                            content="电流报警,请注意";
                         } else if (alermType == 0x77) {
                             deviceControll = 7;
                             type = 6;
+//                            content="功率报警,请注意";
                         } else if (alermType == 0x88) {
                             deviceControll = 8;
                             type = 7;
+//                            content="开关量报警,请注意";
+                        }
+                        List<Alerm> list = deviceAlermDao.findDeviceAlerms(macAddress);
+
+                        if (list.size() != 8) {
+                            deviceAlermDao.deleteDeviceAlerms(macAddress);
+                            Device device2 = deviceDao.findDeviceByMac(macAddress);
+                            long deviceId = device2.getDeviceId();
+                            list.add(new Alerm("来电报警", 0, "设备已来电!", false, macAddress, 0));
+                            list.add(new Alerm("断电报警", 1, "设备已断电,请及时处理", false, macAddress, 0));
+                            list.add(new Alerm("温度报警", 2, "温度报警,请注意", false, macAddress, 0));
+                            list.add(new Alerm("湿度报警", 3, "湿度报警,请注意", false, macAddress, 0));
+                            list.add(new Alerm("电压报警", 4, "电压报警,请注意", false, macAddress, 0));
+                            list.add(new Alerm("电流报警", 5, "电流报警,请注意", false,  macAddress, 0));
+                            list.add(new Alerm("功率报警", 6, "功率报警,请注意", false, macAddress, 0));
+                            list.add(new Alerm("开关量报警", 7, "开关量报警,请注意", false, macAddress, 50));
+                            deviceAlermDao.insertDeviceAlerms(list);
                         }
                         Alerm alerm = deviceAlermDao.findDeviceAlerm(macAddress, type);
-//                        if (alerm.getDeviceAlarmFlag() == 1) {
-//                            Message msg = handler.obtainMessage();
-//                            msg.what = 10003;
-//                            msg.arg1 = type;
-//                            handler.sendMessage(msg);
-//                        }
-//                        if (alerm.getDeviceAlarmBroadcast() == 1 || alerm.getDeviceAlarmBroadcast() == 2) {
-//                            String cotent = alerm.getContent();
-//                            Message msg = handler.obtainMessage();
-//                            msg.what = 10004;
-//                            msg.arg1 = type;
-//                            msg.obj = cotent;
-//                            handler.sendMessage(msg);
-//                        }
-//                        int line = data[5];
+                        Message msg2 = handler.obtainMessage();
+                        msg2.what = 10003;
+                        msg2.arg1 = type;
+                        if (type==7){
+                            msg2.arg2 = data[5];
+                        }else {
+                            msg2.arg2 = 0;
+                        }
+                        handler.sendMessage(msg2);
+                        String cotent = alerm.getContent();
+                        Message msg = handler.obtainMessage();
+                        msg.what = 10004;
+                        msg.arg1 = type;
+                        msg.arg2 = 1;
+                        msg.obj = cotent;
+                        handler.sendMessage(msg);
+                    } else if (funCode == 0xaa) {
+                        for (int j = 4; j < data.length - 2; j++) {
+                            rs485 = rs485 + "" + data[j] + " ";
+                        }
+                        device = deviceDao.findDeviceByMac(macAddress);
+                        device.setRe485(rs485);
+                        deviceDao.update(device);
                     }
-                    if (MainActivity.running && funCode==0x11) {
+                    if (MainActivity.running && funCode == 0x11) {
                         Intent intent = new Intent("MainActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("device", device);
                         sendBroadcast(intent);
-                    } else if (TimerTaskActivity.running && funCode==0x22) {
+
+                    }  else if (PowerLostMomoryActivity.running && funCode == 0x11) {
+                        Intent intent = new Intent("PowerLostMomoryActivity");
+                        intent.putExtra("macAddress", macAddress);
+                        intent.putExtra("plMemory", plMemory);
+                        sendBroadcast(intent);
+                    } else if (TimerTaskActivity.running && funCode == 0x22) {
                         Intent intent = new Intent("TimerTaskActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("timerTaskFlag", timerTaskFlag);
@@ -1388,7 +1789,7 @@ public class MQService extends Service {
                         intent.putExtra("operate", operateState);
                         intent.putExtra("online", true);
                         sendBroadcast(intent);
-                    } else if (LinkedControlActivity.running && funCode==0x33) {
+                    } else if (LinkedControlActivity.running && funCode == 0x33) {
                         Intent intent = new Intent("LinkedControlActivity");
                         intent.putExtra("macAddress", macAddress);
                         if (linkedTypes != null && linkedTypes.size() == 5) {
@@ -1397,18 +1798,18 @@ public class MQService extends Service {
                         }
                         intent.putExtra("online", true);
                         sendBroadcast(intent);
-                    } else if (LinkItemActivity.running && (funCode==0x34 || funCode==0x35 || funCode==0x36 || funCode==0x37 || funCode==0x38)) {
+                    } else if (LinkItemActivity.running && (funCode == 0x34 || funCode == 0x35 || funCode == 0x36 || funCode == 0x37 || funCode == 0x38 || funCode == 0x39)) {
                         Intent intent = new Intent("LinkItemActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("linkType", linkType);
-//                        if (funCode == 0x39) {
-//                            intent.putExtra("moniType", moniType);
-//                            intent.putExtra("linkTypeNum", linkTypeNum);
-//                        }
+                        if (funCode == 0x39) {
+                            intent.putExtra("moniType", moniType);
+                            intent.putExtra("linkTypeNum", linkTypeNum);
+                        }
                         intent.putExtra("operate", operateState);
                         intent.putExtra("online", true);
                         sendBroadcast(intent);
-                    } else if (SwichCheckActivity.running && funCode==0x55) {
+                    } else if (SwichCheckActivity.running && funCode == 0x55) {
                         Intent intent = new Intent("SwichCheckActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("switchState1", switchState1);
@@ -1421,18 +1822,29 @@ public class MQService extends Service {
                         intent.putExtra("switchState8", switchState8);
                         intent.putExtra("online", true);
                         sendBroadcast(intent);
-                    }else if (LocationActivity.running && funCode==0x77){
-                        Intent intent = new Intent("LocationActivity");
-                        intent.putExtra("macAddress", macAddress);
-                        intent.putExtra("latitude", latitude);
-                        intent.putExtra("longitude",longitude);
-                        sendBroadcast(intent);
-                    }else if (AlermActivity.running && funCode==0x66){
+                    } else if (AlermActivity.running && funCode == 0x66) {
                         Intent intent = new Intent("AlermActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("alerms", (Serializable) alerms);
-                        intent.putExtra("online",true);
+                        intent.putExtra("online", true);
                         sendBroadcast(intent);
+                    } else if (LocationActivity.running && funCode == 0x77) {
+                        Intent intent = new Intent("LocationActivity");
+                        intent.putExtra("macAddress", macAddress);
+                        intent.putExtra("latitude", latitude);
+                        intent.putExtra("longitude", longitude);
+                        sendBroadcast(intent);
+                    } else if (LocationSetActivity.running && funCode == 0x77) {
+                        Intent intent = new Intent("LocationSetActivity");
+                        intent.putExtra("macAddress", macAddress);
+                        intent.putExtra("location", location);
+                        sendBroadcast(intent);
+                    }
+                    if (countTimer2 != null) {
+                        Message msg = handler.obtainMessage();
+                        msg.obj = countTimer2;
+                        msg.what = 101;
+                        handler.sendMessage(msg);
                     }
                 }
             } catch (Exception e) {
@@ -1459,7 +1871,7 @@ public class MQService extends Service {
             public void run() {
                 if (!client.isConnected()) {
                     connect(1);
-                    Log.i("MQService","-->startReconnect");
+                    Log.i("MQService", "-->startReconnect");
                 }
             }
         }, 0, 1000, TimeUnit.MILLISECONDS);
@@ -1473,9 +1885,10 @@ public class MQService extends Service {
                 return;
             }
         }
-        CountTimer countTimer = new CountTimer(1000 * 60 * 5*6, 1000);
-        countTimer.setMacArress(macAddress);
-        countTimers.add(countTimer);
+        Message msg = handler.obtainMessage();
+        msg.what = 10005;
+        msg.obj = macAddress;
+        handler.sendMessage(msg);
     }
 
     public void clearCountTimer() {
@@ -1494,7 +1907,8 @@ public class MQService extends Service {
 
     List<CountTimer> countTimers = new LinkedList<>();
 
-    CountTime2 countTime2=new CountTime2(2000,1000);
+    CountTime2 countTime2 = new CountTime2(2000, 1000);
+
     class CountTime2 extends CountDownTimer {
 
         /**
@@ -1510,14 +1924,14 @@ public class MQService extends Service {
 
         @Override
         public void onTick(long millisUntilFinished) {
-            Log.i("CountTime2","-->"+millisUntilFinished/1000);
+            Log.i("CountTime2", "-->" + millisUntilFinished / 1000);
         }
 
         @Override
         public void onFinish() {
-            if (deviceDao!=null){
-                List<Device> devices=deviceDao.findAllDevice();
-                if (!devices.isEmpty()){
+            if (deviceDao != null) {
+                List<Device> devices = deviceDao.findAllDevice();
+                if (!devices.isEmpty()) {
                     new LoadDataAsync(MQService.this).execute(devices);
                 }
             }
@@ -1537,7 +1951,9 @@ public class MQService extends Service {
                 for (Device device : devices) {
                     String deviceMac = device.getDeviceOnlyMac();
                     String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
+                    Log.i("topicNamegetData", "-->" + topicName);
                     getData(topicName, 0x11);
+                    Thread.currentThread().sleep(500);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -1570,20 +1986,19 @@ public class MQService extends Service {
 
         @Override
         public void onTick(long millisUntilFinished) {
-            this.millisUntilFinished = millisUntilFinished/1000;
-            Log.e("millisUntilFinished", macArress+"->" + millisUntilFinished/1000);
+            this.millisUntilFinished = millisUntilFinished / 1000;
+            Log.e("millisUntilFinished", macArress + "->" + millisUntilFinished / 1000);
         }
 
         @Override
         public void onFinish() {
-            Log.e("millisUntilFinished", "-->" + millisUntilFinished/1000);
+            Log.e("CountTimerFinished", "-->" + millisUntilFinished);
 
             String topicName = "qjjc/gateway/" + macArress + "/server_to_client";
-            getData(topicName, 0x11);
-
             Intent intent = new Intent("offline");
             intent.putExtra("macAddress", macArress);
             sendBroadcast(intent);
+            getData(topicName, 0x11);
         }
 
         public long getMillisUntilFinished() {
@@ -1627,6 +2042,12 @@ public class MQService extends Service {
         return flag;
     }
 
+    /**
+     * @param topicName 设备主题
+     * @param qos       消息服务质量
+     * @param bytes
+     * @return
+     */
     public boolean publish(String topicName, int qos, byte[] bytes) {
         boolean flag = false;
         if (client != null && client.isConnected()) {
@@ -1653,7 +2074,7 @@ public class MQService extends Service {
     public boolean subscribe(String topicName, int qos) {
         boolean flag = false;
         try {
-            if (client!=null && !client.isConnected()){
+            if (client != null && !client.isConnected()) {
                 client.connect(options);
             }
         } catch (MqttException e) {
@@ -1671,9 +2092,6 @@ public class MQService extends Service {
         return flag;
     }
 
-    public String getResult() {
-        return result;
-    }
 
     public void insert(Device device) {
         String deviceMac = device.getDeviceOnlyMac();
@@ -1716,6 +2134,18 @@ public class MQService extends Service {
                 swtichState.setState(0);
                 switchChecks.set(i, swtichState);
             }
+        }
+    }
+
+    int[] alermData = new int[17];
+
+    public int[] getAlermData() {
+        return alermData;
+    }
+
+    public void initAlarmData() {
+        for (int i = 0; i < alermData.length; i++) {
+            alermData[i] = 0;
         }
     }
 
@@ -1764,28 +2194,114 @@ public class MQService extends Service {
         }
     }
 
+    WindowManager.LayoutParams param;
+    NotificationManager mNotificationManager;
 
+    private void setAlermDialog(int mode, String line) {
+        try {
+            final AlermDialog4 alermDialog4 = new AlermDialog4(MQService.this);
+            alermDialog4.setLine(line);
+            alermDialog4.setMode(mode);
+            if (Build.VERSION.SDK_INT >= 26) {//8.0新特性
+                WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+                params.screenOrientation = Configuration.ORIENTATION_PORTRAIT;
+                params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+                params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                        | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED;
 
+                alermDialog4.getWindow().setAttributes(params);
+            } else {
+//                WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+//                params.screenOrientation = Configuration.ORIENTATION_PORTRAIT;
+//                params.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
+//                params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+//                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+//                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+//                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+//                        | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED;
+                alermDialog4.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+            }
+            alermDialog4.setCanceledOnTouchOutside(false);
+            alermDialog4.setOnNegativeClickListener(new AlermDialog4.OnNegativeClickListener() {
+                @Override
+                public void onNegativeClick() {
+                    if (mediaPlayer != null) {
+                        mediaPlayer.setLooping(false);
+                        mediaPlayer.reset();
+                    }
+                    alermDialog4.dismiss();
+                }
+            });
+            alermDialog4.setOnPositiveClickListener(new AlermDialog4.OnPositiveClickListener() {
+                @Override
+                public void onPositiveClick() {
+                    if (mediaPlayer != null) {
+                        mediaPlayer.setLooping(false);
+                        mediaPlayer.reset();
+                    }
+                    alermDialog4.dismiss();
+
+                }
+            });
+
+            if (alermDialog4 != null) {
+                alermDialog4.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        soundCount = 3;
+                        if (mediaPlayer != null) {
+                            mediaPlayer.setLooping(false);
+                            mediaPlayer.reset();
+                        }
+                    }
+                });
+            }
+            alermDialog4.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    PowerManager.WakeLock wakeLock;
 
     /**
-     * 初始化语音合成监听。
+     * 获取电源锁，保持该服务在屏幕熄灭时仍然获取CPU时，保持运行
      */
-    private InitListener mTtsInitListener = new InitListener() {
-        @SuppressLint("ShowToast")
-        @Override
-        public void onInit(int code) {
-            Log.d(TAG, "InitListener init() code = " + code);
-            if (code != ErrorCode.SUCCESS) {
-                // showTip("初始化失败,错误码：" + code);
-                Toast.makeText(getApplicationContext(), "初始化失败,错误码：" + code,
-                        Toast.LENGTH_SHORT).show();
-            } else {
-                // 初始化成功，之后可以调用startSpeaking方法
-                // 注：有的开发者在onCreate方法中创建完合成对象之后马上就调用startSpeaking进行合成，
-                // 正确的做法是将onCreate中的startSpeaking调用移至这里
+    private void acquireWakeLock() {
+        if (null == wakeLock) {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK
+                    | PowerManager.ON_AFTER_RELEASE, getClass()
+                    .getCanonicalName());
+            if (null != wakeLock) {
+                Log.i(TAG, "call acquireWakeLock");
+                wakeLock.acquire();
             }
         }
-    };
+    }
+
+//    /**
+//     * 初始化语音合成监听。
+//     */
+//    private InitListener mTtsInitListener = new InitListener() {
+//        @SuppressLint("ShowToast")
+//        @Override
+//        public void onInit(int code) {
+//            Log.d(TAG, "InitListener init() code = " + code);
+//            if (code != ErrorCode.SUCCESS) {
+//                // showTip("初始化失败,错误码：" + code);
+////                Toast.makeText(getApplicationContext(), "初始化失败,错误码：" + code,
+////                        Toast.LENGTH_SHORT).show();
+//            } else {
+//                // 初始化成功，之后可以调用startSpeaking方法
+//                // 注：有的开发者在onCreate方法中创建完合成对象之后马上就调用startSpeaking进行合成，
+//                // 正确的做法是将onCreate中的startSpeaking调用移至这里
+//            }
+//        }
+//    };
 
     class SpeechReceiver extends BroadcastReceiver {
 
@@ -1818,27 +2334,18 @@ public class MQService extends Service {
     }
 
 
-
     /**
      * 初始化语音合成相关数据
      *
      * @Description:
      */
-    private SpeechSynthesizer mTts;// 语音合成
-
-    public void starSpeech(String deviceMac, String content) {
+//    private SpeechSynthesizer mTts;// 语音合成
+    public void starSpeech(String deviceMac, int type) {
 
         // 2.合成参数设置，详见《科大讯飞MSC API手册(Android)》SpeechSynthesizer 类
         Device device = deviceDao.findDeviceByMac(deviceMac);
         if (device != null && device.getVlice2() == 1) {
-            mTts.setParameter(SpeechConstant.VOICE_NAME, "vixy");// 设置发音人
-            mTts.setParameter(SpeechConstant.SPEED, "50");// 设置语速
-            mTts.setParameter(SpeechConstant.VOLUME, "80");// 设置音量，范围0~100
-            mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD); // 设置云端
-            // 设置合成音频保存位置（可自定义保存位置），保存在“./sdcard/iflytek.pcm”
-            // 保存在SD卡需要在AndroidManifest.xml添加写SD卡权限
-            // 3.开始合成
-            mTts.startSpeaking(content, mSynListener);
+            startVoice(type);
         }
         // 合成监听器
         //
@@ -1847,71 +2354,72 @@ public class MQService extends Service {
 
     public void starSpeech2(String content) {
 
-        // 2.合成参数设置，详见《科大讯飞MSC API手册(Android)》SpeechSynthesizer 类
-        mTts.setParameter(SpeechConstant.VOICE_NAME, "vixy");// 设置发音人
-        mTts.setParameter(SpeechConstant.SPEED, "50");// 设置语速
-        mTts.setParameter(SpeechConstant.VOLUME, "80");// 设置音量，范围0~100
-        mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD); // 设置云端
-        // 设置合成音频保存位置（可自定义保存位置），保存在“./sdcard/iflytek.pcm”
-        // 保存在SD卡需要在AndroidManifest.xml添加写SD卡权限
-        // 3.开始合成
-        mTts.startSpeaking(content, mSynListener);
+//        // 2.合成参数设置，详见《科大讯飞MSC API手册(Android)》SpeechSynthesizer 类
+//        mTts.setParameter(SpeechConstant.VOICE_NAME, "xiaoyan");// 设置发音人
+//        mTts.setParameter(SpeechConstant.SPEED, "50");// 设置语速
+//        mTts.setParameter(SpeechConstant.VOLUME, "80");// 设置音量，范围0~100
+//        mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD); // 设置云端
+//        // 设置合成音频保存位置（可自定义保存位置），保存在“./sdcard/iflytek.pcm”
+//        // 保存在SD卡需要在AndroidManifest.xml添加写SD卡权限
+//        // 3.开始合成
+//        mTts.startSpeaking(content, mSynListener);
         // 合成监听器
         //
 
     }
 
-    private SynthesizerListener mSynListener = new SynthesizerListener() {
-        @Override
-        public void onSpeakBegin() {
+//    private SynthesizerListener mSynListener = new SynthesizerListener() {
+//        @Override
+//        public void onSpeakBegin() {
+//
+//        }
+//
+//        @Override
+//        public void onBufferProgress(int i, int i1, int i2, String s) {
+//
+//        }
+//
+//        @Override
+//        public void onSpeakPaused() {
+//
+//        }
+//
+//        @Override
+//        public void onSpeakResumed() {
+//
+//        }
+//
+//        @Override
+//        public void onSpeakProgress(int i, int i1, int i2) {
+//
+//        }
+//
+//        @Override
+//        public void onCompleted(SpeechError speechError) {
+//            Log.i(TAG, "onCompleted:" + speechError.getErrorCode());
+//        }
+//
+//        @Override
+//        public void onEvent(int i, int i1, int i2, Bundle bundle) {
+//
+//        }
+//    };
 
-        }
-
-        @Override
-        public void onBufferProgress(int i, int i1, int i2, String s) {
-
-        }
-
-        @Override
-        public void onSpeakPaused() {
-
-        }
-
-        @Override
-        public void onSpeakResumed() {
-
-        }
-
-        @Override
-        public void onSpeakProgress(int i, int i1, int i2) {
-
-        }
-
-        @Override
-        public void onCompleted(SpeechError speechError) {
-
-        }
-
-        @Override
-        public void onEvent(int i, int i1, int i2, Bundle bundle) {
-
-        }
-    };
-
-
-    public void updateLine(Line2 line2) {
-        deviceLineDao.update(line2);
-    }
 
     /**
      * 获取设备的定位频率
+     *
      * @param deviceMac
      * @return
      */
-    public int getDeviceLocationFre(String deviceMac){
-        Device device=deviceDao.findDeviceByMac(deviceMac);
-        int location=device.getLocation();
+    public int getDeviceLocationFre(String deviceMac) {
+        Device device = deviceDao.findDeviceByMac(deviceMac);
+        int location = device.getLocation();
         return location;
+    }
+
+    public void updateLine(Line2 line2) {
+        deviceLineDao.update(line2);
     }
 
     /**
@@ -1936,12 +2444,36 @@ public class MQService extends Service {
             if (!success) {
                 publish(topicName, 1, bytes);
             }
-            Log.i("success","--->"+success);
+            Log.i("success", "--->" + success);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+
+    public void getData(String topicName, int funCode, int state) {
+        try {
+            byte[] bytes = new byte[16];
+            bytes[0] = (byte) 0x90;
+            bytes[1] = 0x39;
+            bytes[3] = 0x0a;
+            bytes[8] = 3;
+            bytes[9] = (byte) state;
+            int sum = 0;
+            for (int i = 0; i < bytes.length; i++) {
+                sum += bytes[i];
+            }
+            bytes[14] = (byte) (sum % 256);
+            bytes[15] = 0x09;
+            boolean success = publish(topicName, 1, bytes);
+            if (!success) {
+                publish(topicName, 1, bytes);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
 
     /**
      * 基础设置 0x11
@@ -1978,8 +2510,8 @@ public class MQService extends Service {
             datas[4] = (byte) deviceState;
             datas[5] = (byte) prelines;
             datas[6] = (byte) lastlines;
-            datas[8] = (byte) lastlineswitch;
             datas[7] = (byte) prelineswitch;
+            datas[8] = (byte) lastlineswitch;
             datas[9] = (byte) prelinesjog;
             datas[10] = (byte) lastlinesjog;
             datas[11] = (byte) plMemory;
@@ -1994,7 +2526,7 @@ public class MQService extends Service {
             if (!success) {
                 publish(topicName, 1, datas);
             }
-            Log.i("Basic","-->"+success);
+            Log.i("Basic", "-->" + success);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -2007,7 +2539,7 @@ public class MQService extends Service {
      * @param topicName
      * @param timerTask
      */
-    public boolean sendTimerTask(String topicName, TimerTask timerTask,int operate) {
+    public boolean sendTimerTask(String topicName, TimerTask timerTask, int operate) {
         boolean success = false;
         try {
             int mcuVersion = timerTask.getMcuVersion();
@@ -2041,7 +2573,7 @@ public class MQService extends Service {
             data[13] = (byte) lastlines;
             data[14] = (byte) controlState;
             data[15] = (byte) state;
-            data[16]= (byte) operate;
+            data[16] = (byte) operate;
             int sum = 0;
             for (int i : data) {
                 sum += i;
@@ -2061,6 +2593,35 @@ public class MQService extends Service {
     }
 
 
+    class LinkedAsync extends BaseWeakAsyncTask<List<Linked>, Void, Void, MQService> {
+
+        public LinkedAsync(MQService mqService) {
+            super(mqService);
+        }
+
+        @Override
+        protected Void doInBackground(MQService mqService, List<Linked>... lists) {
+            try {
+                List<Linked> linkeds = lists[0];
+                Linked linked = linkeds.get(0);
+                String deviceMac = linked.getDeviceMac();
+                String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
+                for (Linked linked2 : linkeds) {
+                    sendLinkedSet(topicName, linked2, 0x02);
+                    Thread.sleep(500);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(MQService mqService, Void aVoid) {
+
+        }
+    }
+
     /**
      * 发送联动控制
      *
@@ -2068,7 +2629,7 @@ public class MQService extends Service {
      * @param linked
      * @return
      */
-    public boolean sendLinkedSet(String topicName, Linked linked,int operate) {
+    public boolean sendLinkedSet(String topicName, Linked linked, int operate) {
         boolean success = false;
         try {
             int type = linked.getType();
@@ -2132,7 +2693,8 @@ public class MQService extends Service {
             if (type == 2) {
                 bytes[9] = (byte) switchLine;
             }
-            bytes[10]= (byte) operate;
+            bytes[10] = (byte) operate;
+
             int sum = 0;
             for (int i = 0; i < bytes.length; i++) {
                 sum += bytes[i];
@@ -2407,24 +2969,99 @@ public class MQService extends Service {
         return true;
     }
 
-    /**
-     * 获取模拟量检测
-     *
-     * @param params
-     */
 
     private List<SwtichState> switchChecks = new ArrayList<>();
 
-
-
-
-    public void update(Alerm alerm) {
-        deviceAlermDao.update(alerm);
+    public List<SwtichState> getSwitchName() {
+        return switchChecks;
     }
+
+
+
+
+    //锁屏、唤醒相关
+    private KeyguardManager km;
+    private KeyguardManager.KeyguardLock kl;
+    private PowerManager pm;
+    private PowerManager.WakeLock wl;
+
+    private static final int PUSH_NOTIFICATION_ID = (0x001);
+    private static final String PUSH_CHANNEL_ID = "PUSH_NOTIFY_ID";
+    private static final String PUSH_CHANNEL_NAME = "PUSH_NOTIFY_NAME";
+
+
+    private void wakeAndUnlock(boolean b, int type) {
+        if (b) {
+
+//            Log.i("wakeAndUnlock","-->"+content);
+            pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            boolean isOpen = pm.isScreenOn();
+            if (!isOpen) {
+                //获取电源管理器对象
+
+                //获取PowerManager.WakeLock对象，后面的参数|表示同时传入两个值，最后的是调试用的Tag
+                wl = pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "mywakelocktag");
+
+                //点亮屏幕
+                wl.acquire();
+
+//                //得到键盘锁管理器对象
+//                km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+//                kl = km.newKeyguardLock("unLock");
+
+//                //解锁
+//                kl.disableKeyguard();
+                //获取NotificationManager实例
+                mNotificationManager =
+                        (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    NotificationChannel channel = new NotificationChannel(PUSH_CHANNEL_ID, PUSH_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH);
+                    if (mNotificationManager != null) {
+                        mNotificationManager.createNotificationChannel(channel);
+                    }
+                }
+
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(),PUSH_CHANNEL_ID);
+                builder.setSmallIcon(R.mipmap.logo)
+                        .setContentTitle("迈科智联")
+                        .setContentText("你有一条报警信息,请及时处理")
+                        .setDefaults(Notification.DEFAULT_ALL)
+                        .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)// 设置为public后，通知栏将在锁屏界面显示
+                        .setWhen(System.currentTimeMillis())
+                        .setAutoCancel(true);
+               Notification notification =builder.build();
+                notification.flags |= Notification.FLAG_AUTO_CANCEL;
+                mNotificationManager.notify(1, builder.build());
+
+            }
+
+        } else {
+            //锁屏
+            kl.reenableKeyguard();
+
+            //释放wakeLock，关灯
+            wl.release();
+        }
+
+    }
+
+    String content2 = "ssssssssssssssssssss";
+    String alermsArray[] = {"来电报警!", "断电报警!", "温度报警,请注意", "湿度报警,请注意", "电压报警,请注意", "电流报警请注意", "功率报警请注意", "开关量报警请注意"};
+    String alerm0 = "来电报警!";
+//    String alerm=alermsArray[0];
+//    String alerm0=alermsArray[0];
+//    String alerm0=alermsArray[0];
+//    String alerm0=alermsArray[0];
+//    String alerm0=alermsArray[0];
+//    String alerm0=alermsArray[0];
 
     Handler.Callback mCallback = new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
+//
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+
+
             if (msg.what == 1001) {
                 String name = (String) msg.obj;
                 if (!TextUtils.isEmpty(name)) {
@@ -2432,13 +3069,224 @@ public class MQService extends Service {
                 }
             } else if (msg.what == 101) {
                 CountTimer countTimer = (CountTimer) msg.obj;
-                if (countTimer!=null){
+                if (countTimer != null) {
                     countTimer.start();
                 }
+            } else if (msg.what == 10001) {
+                String ss = (String) msg.obj;
+                ToastUtil.showShort(MQService.this, ss);
+            } else if (msg.what == 10003) {
+                int type = msg.arg1;
+                wakeAndUnlock(true, 0);
+                int arg2 = msg.arg2;
+                String line = "";
+                if (arg2!=0){
+                    line="线路:"+arg2;
+                }
+                setAlermDialog(type, line);
+            } else if (msg.what == 10004) {
+                int arg1 = msg.arg1;
+                int arg2 = msg.arg2;
+                if (arg2 == 1) {
+                    if (arg1 == 0) {
+                        startVoice(4);
+                    } else if (arg1 == 1) {
+                        startVoice(6);
+                    } else {
+                        startVoice(5);
+                    }
+                } else if (arg2 == 2) {
+                    if (arg1 == 0) {
+                        startVoice(4, true);
+                    } else if (arg1 == 1) {
+                        startVoice(6, true);
+                    } else {
+                        startVoice(5, true);
+                    }
+                }
+            } else if (msg.what == 10005) {
+                String macAddress = (String) msg.obj;
+                CountTimer countTimer = new CountTimer(1000 * 60 * 5 * 6, 1000);
+                countTimer.setMacArress(macAddress);
+                countTimers.add(countTimer);
             }
+//            } else if (msg.what == 10005) {
+//                Log.i("tttttttttttttttttttttt", "llllllllllllllllll");
+//                Map<String, Object> params = (Map<String, Object>) msg.obj;
+//                new LoadAsyncTask(MQService.this).execute(params);
+//
+//            }
             return true;
         }
     };
-    Handler handler = new WeakRefHandler(mCallback);
+
+    /**
+     * @param type 0 打开 1关闭 2控制 3设置 4来电报警 5其他报警,6,关闭报警,7,删除
+     */
+    int soundCount = 0;
+    int soundType = 0;
+
+    public void startVoice(int type) {
+        try {
+            soundType = type;
+            mediaPlayer.reset();
+            if (type == 0) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.open);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                file.close();
+            } else if (type == 1) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.close);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+
+                file.close();
+            } else if (type == 2) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.control);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                file.close();
+            } else if (type == 3) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.set);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                file.close();
+            } else if (type == 4) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_com);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                soundCount = 1;
+                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mp) {
+                        try {
+                            if (soundCount == 3) {
+                                soundCount = 3;
+                                return;
+                            } else if (soundCount < 3 && soundType == 4) {
+                                mediaPlayer.reset();
+                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_com);
+                                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                                mediaPlayer.prepare();
+                                mediaPlayer.start();
+                                file.close();
+                                soundCount++;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+
+                file.close();
+
+            } else if (type == 5) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_other);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                soundCount = 1;
+                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mp) {
+                        try {
+                            if (soundCount == 3) {
+                                soundCount = 3;
+                                return;
+                            } else if (soundCount < 3 && soundType == 5) {
+                                mediaPlayer.reset();
+                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_other);
+                                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                                mediaPlayer.prepare();
+                                mediaPlayer.start();
+                                file.close();
+                                soundCount++;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                });
+
+                file.close();
+
+
+            } else if (type == 6) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_close);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                soundCount = 1;
+                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mp) {
+                        try {
+                            if (soundCount == 3) {
+                                soundCount = 3;
+                            } else if (soundCount < 3 && soundType == 6) {
+                                mediaPlayer.reset();
+                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_close);
+                                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                                mediaPlayer.prepare();
+                                mediaPlayer.start();
+                                file.close();
+                                soundCount++;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                });
+
+            } else if (type == 7) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.delete);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                file.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void startVoice(int type, boolean looper) {
+        try {
+            if (type == 4) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_com);
+                mediaPlayer.setLooping(looper);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                file.close();
+            } else if (type == 5) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_close);
+                mediaPlayer.setLooping(looper);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                file.close();
+            } else if (type == 6) {
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_other);
+                mediaPlayer.setLooping(looper);
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepare();
+                mediaPlayer.start();
+                file.close();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    Handler handler = new Handler(mCallback);
 
 }

@@ -26,9 +26,10 @@ public class DeviceListActivity extends BaseActivity {
     @BindView(R.id.image_right_ps) ImageView image_right_ps;//配电系统右键头
     @BindView(R.id.tv_ks) TextView tv_ks;//控电系统
     @BindView(R.id.image_right_ks) ImageView image_right_ks;//控电系统右键头
+    int userId;
     @Override
     public void initParms(Bundle parms) {
-
+        userId=parms.getInt("userId");
     }
 
     @Override
@@ -68,6 +69,7 @@ public class DeviceListActivity extends BaseActivity {
                 ps=1;
                 Intent intent=new Intent(this,QRScannerActivity.class);
                 intent.putExtra("type",1);
+                intent.putExtra("userId",userId);
                 startActivity(intent);
                 break;
             case R.id.rl_ks:
@@ -75,6 +77,7 @@ public class DeviceListActivity extends BaseActivity {
                 setKsMode();
                 Intent intent2=new Intent(this,QRScannerActivity.class);
                 intent2.putExtra("type",2);
+                intent2.putExtra("userId",userId);
                 startActivity(intent2);
                 break;
         }

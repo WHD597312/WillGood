@@ -28,6 +28,7 @@ import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.database.dao.impl.DeviceLinkDaoImpl;
 import com.peihou.willgood.database.dao.impl.DeviceLinkedTypeDaoImpl;
+import com.peihou.willgood.pojo.Linked;
 import com.peihou.willgood.pojo.LinkedType;
 import com.peihou.willgood.service.MQService;
 import com.peihou.willgood.util.TenTwoUtil;
@@ -124,13 +125,30 @@ public class LinkedControlActivity extends BaseActivity {
     @Override
     protected void onStart() {
         super.onStart();
+
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mqService!=null){
+            list.clear();
+            List<LinkedType> list2 = deviceLinkedTypeDao.findLinkdType(deviceMac);
+            list.addAll(list2);
+            adapter.notifyDataSetChanged();
+            mqService.getData(topicName, 0x33);
+            countTimer.start();
+        }
         running = true;
     }
 
+    int returnData=0;
     @Override
     protected void onStop() {
         super.onStop();
         running = false;
+        returnData=0;
     }
 
     @OnClick({R.id.img_back})
@@ -212,10 +230,11 @@ public class LinkedControlActivity extends BaseActivity {
                                     return 0;
                                 }
                             });
-//                            if (click == 1) {
-//                                mqService.starSpeech(deviceMac, "控制成功");
-//                                click = 0;
-//                            }
+//
+                            if (click==1){
+                                mqService.starSpeech(deviceMac,3);
+                                click=0;
+                            }
                             list.clear();
                             list.addAll(linkedTypes);
                             adapter.notifyDataSetChanged();
@@ -227,6 +246,14 @@ public class LinkedControlActivity extends BaseActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode==1000){
+            returnData=1;
         }
     }
 
@@ -317,7 +344,7 @@ public class LinkedControlActivity extends BaseActivity {
                     intent.putExtra("deviceId", deviceId);
                     intent.putExtra("deviceMac", deviceMac);
                     intent.putExtra("online", online);
-                    startActivity(intent);
+                    startActivityForResult(intent,1000);
                 }
 
             });
@@ -401,7 +428,7 @@ public class LinkedControlActivity extends BaseActivity {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        if (popupWindow2 == null)
+
             popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);

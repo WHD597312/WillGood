@@ -89,13 +89,7 @@ public class LinkItemActivity extends BaseActivity {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.img_back:
-                if (mqService!=null){
-                    List<Linked> list=mqService.getLinkeds(deviceMac,type);
-                    if (!list.isEmpty()){
-                        List<Linked> linkeds=updateLinkeds(list);
-                        mqService.updateLinkeds(linkeds);
-                    }
-                }
+                setResult(1002);
                 finish();
                 break;
             case R.id.img_add:
@@ -166,20 +160,42 @@ public class LinkItemActivity extends BaseActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        if (mqService != null && returnData==0) {
+            list.clear();
+            adapter.notifyDataSetChanged();
+            int funCode = 0;
+            if (type == 0) {
+                funCode = 0x34;
+            } else if (type == 1) {
+                funCode = 0x35;
+            } else if (type == 2) {
+                funCode = 0x36;
+            } else if (type == 3) {
+                funCode = 0x37;
+            } else if (type == 4) {
+                funCode = 0x38;
+            } else if (type == 5) {
+                funCode = 0x39;
+            }
+            mqService.getData(topicName, funCode);
+            countTimer.start();
+            returnData=0;
+        }
+
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
         running = false;
+        returnData=0;
     }
 
     @Override
     public void onBackPressed() {
-        if (mqService!=null){
-            List<Linked> list=mqService.getLinkeds(deviceMac,type);
-            if (!list.isEmpty()){
-                List<Linked> linkeds=updateLinkeds(list);
-                mqService.updateLinkeds(linkeds);
-            }
-        }
+        setResult(1002);
         super.onBackPressed();
     }
 
@@ -198,6 +214,13 @@ public class LinkItemActivity extends BaseActivity {
             MQService.LocalBinder binder = (MQService.LocalBinder) service;
             mqService = binder.getService();
             if (mqService != null) {
+
+                    List<Linked> list=mqService.getLinkeds(deviceMac,type);
+                    if (!list.isEmpty()){
+                        List<Linked> linkeds=updateLinkeds(list);
+                        mqService.updateLinkeds(linkeds);
+                    }
+
                 int funCode = 0;
                 if (type == 0) {
                     funCode = 0x34;
@@ -245,12 +268,15 @@ public class LinkItemActivity extends BaseActivity {
                     }
                     int linkType = intent.getIntExtra("linkType", -1);
                     if (macAddress.equals(deviceMac) && linkType == type) {
-//                        int operate = intent.getIntExtra("operate", 0);
-//                        if (operate == 1) {
-//                            mqService.starSpeech(deviceMac,"删除成功");
-//                        } else {
-//                            mqService.starSpeech(deviceMac,"设置成功");
-//                        }
+                        int operate = intent.getIntExtra("operate", 0);
+                        if (returnData==1){
+                            if (operate == 1) {
+                                mqService.starSpeech(deviceMac,7);
+                            } else {
+                                mqService.starSpeech(deviceMac,3);
+                            }
+                            returnData=0;
+                        }
                             List<Linked> linkeds = mqService.getLinkeds(deviceMac, linkType);
                             list.clear();
                             list.addAll(linkeds);
@@ -357,7 +383,12 @@ public class LinkItemActivity extends BaseActivity {
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, final int position) {
             final Linked linked = list.get(position);
             final int state = linked.getState();
-            String name = linked.getName();
+            String name="";
+            if (type==2){
+                name = linked.getName();
+            }else {
+                name = linked.getName()+"("+(position+1)+")";
+            }
             String lines = linked.getLines();
             int condition = linked.getCondition();
             int triType = linked.getTriType();
@@ -375,17 +406,26 @@ public class LinkItemActivity extends BaseActivity {
             } else {
                 tv_lines.setText("");
             }
+            String ss="";
             if (type == 2) {
                 if (condition == 1) {
-                    c = "断开";
+                    c = "开关量断开";
                 } else {
-                    c = "闭合";
+                    c = "开关量闭合";
                 }
                 if (conditionState == 1) {
-                    c = c + "  开";
+                    c = c + "  开启";
                 } else {
-                    c = c + "  关";
+                    c = c + "  关闭";
                 }
+
+                if (triType==1){
+                    ss=" 单次";
+                }else if (triType==0){
+                    ss=" 循环";
+                }
+                c=c+ss;
+
             } else {
                 if (triState == 1) {
                     c = "高于" + "  " + condition;
@@ -393,10 +433,16 @@ public class LinkItemActivity extends BaseActivity {
                     c = "低于" + "  " + condition;
                 }
                 if (conditionState == 1) {
-                    c = c + "  开";
+                    c = c + "  开启";
                 } else {
-                    c = c + "  关";
+                    c = c + "  关闭";
                 }
+                if (triType==1){
+                    ss=" 单次";
+                }else if (triType==0){
+                    ss=" 循环";
+                }
+                c=c+ss;
             }
 
 
@@ -454,7 +500,7 @@ public class LinkItemActivity extends BaseActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (mqService != null) {
+
             if (resultCode == 1000) {
                 int funCode = 0;
                 if (type == 0) {
@@ -471,14 +517,16 @@ public class LinkItemActivity extends BaseActivity {
                 returnData = 1;
 //                mqService.getData(topicName, funCode);
                 Linked linked = (Linked) data.getSerializableExtra("linked");
-                if (linked != null) {
+                if (linked != null && mqService!=null) {
                     Log.i("topicName","-->"+topicName);
                     mqService.sendLinkedSet(topicName, linked,0x01);
                     add = 1;
                     countTimer.start();
                 }
+            }else if (resultCode==1002){
+                returnData=2;
             }
-        }
+
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -525,7 +573,7 @@ public class LinkItemActivity extends BaseActivity {
         View view = View.inflate(this, R.layout.progress, null);
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
-        if (popupWindow2==null)
+
             popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
@@ -544,5 +592,4 @@ public class LinkItemActivity extends BaseActivity {
         popupWindow2.showAtLocation(tv_title, Gravity.CENTER, 0, 0);
         //添加按键事件监听
     }
-
 }

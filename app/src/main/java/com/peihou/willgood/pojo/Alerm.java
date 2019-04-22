@@ -40,6 +40,14 @@ public class Alerm implements Serializable {
     private int deviceAlarmBroadcast;//语音播报
     private int deviceAlarmFlag;//弹框提醒
     private int state2;//报警值高于，低于 0x11高于 0x22低于
+    public Alerm(String name, int type,String content, boolean open,String deviceMac,double value) {
+        this.name = name;
+        this.type = type;
+        this.content=content;
+        this.open = open;
+        this.deviceMac=deviceMac;
+        this.value=value;
+    }
     public Alerm(String name, int type, boolean open,String deviceMac) {
         this.name = name;
         this.type = type;

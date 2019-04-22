@@ -18,12 +18,14 @@ import com.google.gson.Gson;
 import com.peihou.willgood.R;
 import com.peihou.willgood.activity.MainActivity;
 import com.peihou.willgood.base.BaseActivity;
-import com.peihou.willgood.devicelist.DeviceListActivity;
+import com.peihou.willgood.database.dao.impl.DeviceDaoImpl;
 import com.peihou.willgood.pojo.UserInfo;
+import com.peihou.willgood.receiver.UtilsJPush;
 import com.peihou.willgood.util.Mobile;
 import com.peihou.willgood.util.ToastUtil;
 import com.peihou.willgood.util.http.BaseWeakAsyncTask;
 import com.peihou.willgood.util.http.HttpUtils;
+
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -34,8 +36,10 @@ import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
 import butterknife.OnClick;
+import cn.jpush.android.api.JPushInterface;
 
 public class LoginActivity extends BaseActivity {
+
 
     @BindView(R.id.tv_register) TextView tv_register;//注册
     @BindView(R.id.tv_login) TextView tv_login;//登录
@@ -44,6 +48,7 @@ public class LoginActivity extends BaseActivity {
     @BindView(R.id.img_xianshi) ImageView img_xianshi;//隐藏密码
     @BindView(R.id.et_phone) EditText et_phone;//编辑电话
     @BindView(R.id.et_pswd) EditText et_pswd;//编辑密码
+    DeviceDaoImpl deviceDao;
 
 
     private SharedPreferences sharedPreferences;
@@ -65,18 +70,28 @@ public class LoginActivity extends BaseActivity {
         tv_login.getPaint().setFakeBoldText(true);
         tv_register.getPaint().setFakeBoldText(false);
         sharedPreferences=getSharedPreferences("userInfo2",Context.MODE_PRIVATE);
+        deviceDao=new DeviceDaoImpl(getApplicationContext());
 
         phone=sharedPreferences.getString("phone","");
         password=sharedPreferences.getString("password","");
 
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
         if (!TextUtils.isEmpty(phone) && !TextUtils.isEmpty(password)){
             try {
                 if (exit==1){
                     sharedPreferences.edit().remove("password").commit();
                     password="";
-                    et_phone.setText(phone);
+                    UtilsJPush.stopJpush(this);
                 }else if (exit==0){
-                    Intent intent=new Intent(LoginActivity.this,MainActivity.class);
+                    int userId=sharedPreferences.getInt("userId",0);
+                    Intent intent=new Intent(LoginActivity.this, MainActivity.class);
+                    intent.putExtra("login",1);
+                    intent.putExtra("userId",userId);
                     startActivity(intent);
 //                    new LoginAsync(LoginActivity.this).execute(params);
 //                    startActivity(DeviceListActivity.class);
@@ -85,6 +100,8 @@ public class LoginActivity extends BaseActivity {
                 e.printStackTrace();
             }
         }
+        et_phone.setText(phone);
+        et_pswd.setText(password);
     }
 
     @Override
@@ -152,6 +169,7 @@ public class LoginActivity extends BaseActivity {
                         params.put("phone",phone);
                         params.put("password",password);
                         login=1;
+                        UtilsJPush.resumeJpush(this);
                         new LoginAsync(LoginActivity.this).execute(params).get(3,TimeUnit.SECONDS);
                     } else if (state==1){
                         params.put("phone",phone);
@@ -164,7 +182,7 @@ public class LoginActivity extends BaseActivity {
                 }
                 break;
             case R.id.btn_forpswd:
-                Intent intent=new Intent(this, ResetPswdActivity.class);
+                Intent intent=new Intent(this,ResetPswdActivity.class);
                 startActivityForResult(intent,1001);
                 break;
         }
@@ -179,17 +197,17 @@ public class LoginActivity extends BaseActivity {
         }
     }
 
-    class RegisterAsync extends BaseWeakAsyncTask<Map<String,Object>,Void,Integer, LoginActivity>{
+    class RegisterAsync extends BaseWeakAsyncTask<Map<String,Object>,Void,Integer,LoginActivity>{
 
         public RegisterAsync(LoginActivity activity) {
             super(activity);
         }
 
         @Override
-        protected Integer doInBackground(LoginActivity activity, Map<String, Object>... maps) {
+        protected Integer doInBackground(LoginActivity activity,Map<String, Object>... maps) {
             logining=1;
             int code=0;
-            String url= HttpUtils.ipAddress+"user/register";
+            String url=HttpUtils.ipAddress+"user/register";
             Map<String,Object> params=maps[0];
             String result=HttpUtils.requestPost(url,params);
             try {
@@ -197,6 +215,9 @@ public class LoginActivity extends BaseActivity {
                 if (!TextUtils.isEmpty(result)){
                     JSONObject jsonObject=new JSONObject(result);
                     code=jsonObject.getInt("returnCode");
+                    if (code==100){
+                        deviceDao.deleteAll();
+                    }
                 }
             }catch (Exception e){
                 e.printStackTrace();
@@ -205,7 +226,7 @@ public class LoginActivity extends BaseActivity {
         }
 
         @Override
-        protected void onPostExecute(LoginActivity activity, Integer code) {
+        protected void onPostExecute(LoginActivity activity,Integer code) {
             switch (code){
                 case 100:
                    try {
@@ -229,20 +250,20 @@ public class LoginActivity extends BaseActivity {
         }
     }
     private int logining=0;
-    class LoginAsync extends BaseWeakAsyncTask<Map<String,Object>,Void,Integer, LoginActivity> {
+    class LoginAsync extends BaseWeakAsyncTask<Map<String,Object>,Void,Integer,LoginActivity> {
 
         public LoginAsync(LoginActivity activity) {
             super(activity);
         }
 
         @Override
-        protected Integer doInBackground(LoginActivity activity, Map<String, Object>... maps) {
+        protected Integer doInBackground(LoginActivity activity,Map<String, Object>... maps) {
             int code=0;
             String url= HttpUtils.ipAddress+"user/login";
             logining=1;
             Map<String,Object> params2=maps[0];
             try {
-                String result= HttpUtils.requestPost(url,params2);
+                String result=HttpUtils.requestPost(url,params2);
                 if (TextUtils.isEmpty(result)){
                     logining=0;
                     result=HttpUtils.requestPost(url,params2);
@@ -258,6 +279,7 @@ public class LoginActivity extends BaseActivity {
                         UserInfo userInfo=gson.fromJson(data,UserInfo.class);
                         SharedPreferences.Editor editor=sharedPreferences.edit();
                         int userId=userInfo.getUserId();
+
                         String username=userInfo.getUsername();
                         String phone=userInfo.getPhone();
                         String password=userInfo.getPassword();
@@ -266,6 +288,7 @@ public class LoginActivity extends BaseActivity {
                         editor.putString("phone",phone);
                         editor.putString("password",password);
                         Log.i("userId","-->"+userId);
+                        JPushInterface.setAlias(LoginActivity.this,1,""+userId);
                         editor.commit();
                     }
                 }
@@ -276,18 +299,21 @@ public class LoginActivity extends BaseActivity {
         }
 
         @Override
-        protected void onPostExecute(LoginActivity activity, Integer code) {
+        protected void onPostExecute(LoginActivity activity,Integer code) {
             switch (code){
                 case 100:
                     try {
                         if (state==1){
                             ToastUtil.showShort(LoginActivity.this,"注册成功");
-                            startActivity(MainActivity.class);
+                            Intent intent=new Intent(LoginActivity.this,MainActivity.class);
+                            int userId=sharedPreferences.getInt("userId",0);
+                            intent.putExtra("userId",userId);
+                            startActivity(intent);
                         }else {
                             int userId=sharedPreferences.getInt("userId",0);
-                            params.clear();
-                            params.put("userId",userId);
                             Intent intent=new Intent(LoginActivity.this,MainActivity.class);
+                            intent.putExtra("login",1);
+                            intent.putExtra("userId",userId);
                             startActivity(intent);
 //                            new LoadDeviceListAsync(LoginActivity.this).execute(params);
                         }
@@ -313,11 +339,11 @@ public class LoginActivity extends BaseActivity {
 
         @Override
         protected Integer doInBackground(Map<String, Object>... maps) {
-            String url= HttpUtils.ipAddress+"user/questPhoneIsExist";
+            String url=HttpUtils.ipAddress+"user/questPhoneIsExist";
             int code=0;
             Map<String,Object> params=maps[0];
             try {
-                String result= HttpUtils.requestPost(url,params);
+                String result=HttpUtils.requestPost(url,params);
                 Log.i("result","-->"+result);
             }catch (Exception e){
                 e.printStackTrace();
@@ -332,7 +358,7 @@ public class LoginActivity extends BaseActivity {
     private void setLoginModle(){
         et_phone.setText("");
         et_pswd.setText("");
-        btn_forpswd.setVisibility(View.VISIBLE);
+        btn_forpswd.setVisibility(View.GONE);
         btn_login.setText("登录");
         tv_login.setTextSize(22);
         tv_register.setTextSize(16);

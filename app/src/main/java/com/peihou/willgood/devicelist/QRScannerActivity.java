@@ -97,6 +97,7 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
     DeviceLineDaoImpl deviceLineDao;//设备线路表操作对象
     int addType=0;
     int type=-1;
+    int userId;
     @Override
     public void initParms(Bundle parms) {
         type=parms.getInt("type");
@@ -110,6 +111,8 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
 
     @Override
     public void initView(View view) {
+        SharedPreferences sharedPreferences = getSharedPreferences("userInfo2", Context.MODE_PRIVATE);
+        userId = sharedPreferences.getInt("userId", 0);
         deviceDao=new DeviceDaoImpl(getApplicationContext());
         deviceLineDao=new DeviceLineDaoImpl(getApplicationContext());
         init();
@@ -202,15 +205,20 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
                     ToastUtil.show(this,"设备IMEI不能为空",Toast.LENGTH_SHORT);
                     break;
                 }
-                deviceDao.deleteAll();
-                deviceLineDao.deleteAll();
-                for (int i = 1; i <17 ; i++) {
-                    lines.add(new Line2(false,i+"路",0,false,i,name.trim()));
+                List<Device> devices=deviceDao.findDeviceDeviceType(type);//查询同一种设备类型
+                deviceDao.deleteDevices(devices);
+                List<Line2> lines2=deviceLineDao.findDeviceLines(name.trim());
+                if (lines2.size()!=16){
+                    deviceLineDao.deleteDeviceLines(name.trim());
+                    for (int i = 1; i <17 ; i++) {
+                        lines.add(new Line2(false,i+"路",0,false,i,name.trim()));
+                    }
+                    deviceLineDao.insertDeviceLines(lines);
                 }
-                deviceLineDao.insertDeviceLines(lines);
                 Device device=new Device();
                 device.setDeviceOnlyMac(name.trim());
                 device.setSystem(type);
+                device.setUserId(userId);
                 if (deviceDao.insert(device)){
                     ToastUtil.show(this,"添加成功",Toast.LENGTH_SHORT);
                     Intent intent=new Intent(this,MainActivity.class);
@@ -310,22 +318,32 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
                     ToastUtil.show(this,"设备IMEI不能为空",Toast.LENGTH_SHORT);
                     return;
                 }
-                deviceDao.deleteAll();
-                deviceLineDao.deleteAll();
-                for (int i = 1; i <17 ; i++) {
-                    lines.add(new Line2(false,i+"路",0,false,i,name.trim()));
+//                deviceDao.deleteAll();
+//                deviceLineDao.deleteAll();
+                List<Device> devices2=deviceDao.findDevicesByMac(name.trim());//查询同一个mac的所有设备
+                deviceDao.deleteDevices(devices2);
+                List<Device> devices=deviceDao.findDeviceDeviceType(type);//查询同一种设备类型
+                deviceDao.deleteDevices(devices);
+                List<Line2> lines2=deviceLineDao.findDeviceLines(name.trim());
+                if (lines2.size()!=16){
+                    deviceLineDao.deleteDeviceLines(name.trim());
+                    for (int i = 1; i <17 ; i++) {
+                        lines.add(new Line2(false,i+"路",0,false,i,name.trim()));
+                    }
+                    deviceLineDao.insertDeviceLines(lines);
                 }
-                deviceLineDao.insertDeviceLines(lines);
                 Device device=new Device();
                 device.setDeviceOnlyMac(name.trim());
                 device.setSystem(type);
+                device.setUserId(userId);
                 if (deviceDao.insert(device)){
                     ToastUtil.show(this,"添加成功",Toast.LENGTH_SHORT);
                     Intent intent=new Intent(this,MainActivity.class);
                     startActivity(intent);
                 }else {
                     ToastUtil.show(this,"添加失败",Toast.LENGTH_SHORT);
-                }            }
+                }
+            }
         }catch (Exception e){
             e.printStackTrace();
         }
