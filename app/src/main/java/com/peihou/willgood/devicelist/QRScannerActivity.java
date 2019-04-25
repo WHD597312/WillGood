@@ -59,6 +59,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -71,9 +72,10 @@ import pub.devrel.easypermissions.EasyPermissions;
 /**
  * 扫描二维码
  */
-public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Callback,EasyPermissions.PermissionCallbacks {
+public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Callback, EasyPermissions.PermissionCallbacks {
 
-    @BindView(R.id.viewfinder_view) ViewfinderView viewfinderView;
+    @BindView(R.id.viewfinder_view)
+    ViewfinderView viewfinderView;
 
     private CaptureActivityHandler handler;
     private boolean hasSurface;
@@ -84,23 +86,29 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
     private boolean playBeep;
     private static final float BEEP_VOLUME = 0.10f;
     private boolean vibrate;
-    @BindView(R.id.rl_body4) RelativeLayout rl_body4;
-    @BindView(R.id.rl_body3) RelativeLayout rl_body3;
+    @BindView(R.id.rl_body4)
+    RelativeLayout rl_body4;
+    @BindView(R.id.rl_body3)
+    RelativeLayout rl_body3;
     @BindView(R.id.tv_wifi)
     TextView tv_wifi;//wifi添加设备
-    @BindView(R.id.tv_gprs) TextView tv_gprs;//gprs添加设备
+    @BindView(R.id.tv_gprs)
+    TextView tv_gprs;//gprs添加设备
     @BindView(R.id.et_name)
     EditText et_name;//gprs/wifi名称
-    @BindView(R.id.et_pswd) EditText et_pswd;//WiFi密码
-    @BindView(R.id.et_orignal_code) EditText et_orignal_code;//wifi状态下的初始码
+    @BindView(R.id.et_pswd)
+    EditText et_pswd;//WiFi密码
+    @BindView(R.id.et_orignal_code)
+    EditText et_orignal_code;//wifi状态下的初始码
     DeviceDaoImpl deviceDao;//设备表操作对象
     DeviceLineDaoImpl deviceLineDao;//设备线路表操作对象
-    int addType=0;
-    int type=-1;
+    int addType = 0;
+    int type = -1;
     int userId;
+
     @Override
     public void initParms(Bundle parms) {
-        type=parms.getInt("type");
+        type = parms.getInt("type");
     }
 
     @Override
@@ -113,8 +121,8 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
     public void initView(View view) {
         SharedPreferences sharedPreferences = getSharedPreferences("userInfo2", Context.MODE_PRIVATE);
         userId = sharedPreferences.getInt("userId", 0);
-        deviceDao=new DeviceDaoImpl(getApplicationContext());
-        deviceLineDao=new DeviceLineDaoImpl(getApplicationContext());
+        deviceDao = new DeviceDaoImpl(getApplicationContext());
+        deviceLineDao = new DeviceLineDaoImpl(getApplicationContext());
         init();
     }
 
@@ -128,8 +136,6 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
         hasSurface = false;
         inactivityTimer = new InactivityTimer(this);
     }
-
-
 
 
     @Override
@@ -155,28 +161,30 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
 
 
     }
-    List<Line2> lines=new ArrayList<>();//设备线路列表 总共16路
-    int deviceModel=0;
-    @OnClick({R.id.back,R.id.img_book,R.id.rl_body3,R.id.rl_body4,R.id.bt_add_finish,R.id.tv_wifi,R.id.tv_gprs})
+
+    List<Line2> lines = new ArrayList<>();//设备线路列表 总共16路
+    int deviceModel = 0;
+
+    @OnClick({R.id.back, R.id.img_book, R.id.rl_body3, R.id.rl_body4, R.id.bt_add_finish, R.id.tv_wifi, R.id.tv_gprs})
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.back:
                 finish();
                 break;
             case R.id.img_book:
-                if (addType==0){
-                    addType=1;
+                if (addType == 0) {
+                    addType = 1;
                     rl_body3.setVisibility(View.VISIBLE);
                     rl_body4.setVisibility(View.GONE);
-                }else if (addType==1){
-                    addType=0;
+                } else if (addType == 1) {
+                    addType = 0;
                     rl_body3.setVisibility(View.GONE);
                     rl_body4.setVisibility(View.VISIBLE);
 
                 }
                 break;
             case R.id.tv_wifi:
-                if (deviceModel==0)
+                if (deviceModel == 0)
                     break;
                 tv_wifi.setTextColor(Color.parseColor("#09c585"));
                 tv_gprs.setTextColor(Color.parseColor("#646464"));
@@ -186,10 +194,10 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
                 et_orignal_code.setHint("请输入初始码");
                 et_orignal_code.setVisibility(View.VISIBLE);
                 et_orignal_code.setBackgroundColor(Color.parseColor("#f7f7fa"));
-                deviceModel=0;
+                deviceModel = 0;
                 break;
             case R.id.tv_gprs:
-                if (deviceModel==1)
+                if (deviceModel == 1)
                     break;
                 tv_wifi.setTextColor(Color.parseColor("#646464"));
                 tv_gprs.setTextColor(Color.parseColor("#09c585"));
@@ -197,94 +205,57 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
                 et_pswd.setHint("请输入初始码");
                 et_orignal_code.setHint("");
                 et_orignal_code.setVisibility(View.GONE);
-                deviceModel=1;
+                deviceModel = 1;
                 break;
             case R.id.bt_add_finish:
-                String name=et_name.getText().toString();
-                if (TextUtils.isEmpty(name)){
-                    ToastUtil.show(this,"设备IMEI不能为空",Toast.LENGTH_SHORT);
+                String name = et_name.getText().toString();
+                if (TextUtils.isEmpty(name)) {
+                    ToastUtil.show(this, "设备IMEI不能为空", Toast.LENGTH_SHORT);
                     break;
                 }
-                List<Device> devices=deviceDao.findDeviceDeviceType(type);//查询同一种设备类型
-                deviceDao.deleteDevices(devices);
-                List<Line2> lines2=deviceLineDao.findDeviceLines(name.trim());
-                if (lines2.size()!=16){
-                    deviceLineDao.deleteDeviceLines(name.trim());
-                    for (int i = 1; i <17 ; i++) {
-                        lines.add(new Line2(false,i+"路",0,false,i,name.trim()));
-                    }
-                    deviceLineDao.insertDeviceLines(lines);
+                String code = et_pswd.getText().toString();
+                if (TextUtils.isEmpty(code)) {
+                    ToastUtil.show(this, "设备IMEI不能为空", Toast.LENGTH_SHORT);
+                    break;
                 }
-                Device device=new Device();
-                device.setDeviceOnlyMac(name.trim());
-                device.setSystem(type);
-                device.setUserId(userId);
-                if (deviceDao.insert(device)){
-                    ToastUtil.show(this,"添加成功",Toast.LENGTH_SHORT);
-                    Intent intent=new Intent(this,MainActivity.class);
-                    startActivity(intent);
-                }else {
-                    ToastUtil.show(this,"添加失败",Toast.LENGTH_SHORT);
+
+                Map<String, Object> params = new HashMap<>();
+                params.put("deviceOnlyMac", name);
+                params.put("devicePassword", code);
+                params.put("deviceUserId", userId);
+                params.put("deviceModel", 0);
+                try {
+                    new AddDeivceAsync(QRScannerActivity.this).execute(params).get(5, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
+//                List<Device> devices2=deviceDao.findDevicesByMac(name.trim());//查询同一个mac的所有设备
+//                deviceDao.deleteDevices(devices2);
+//                List<Device> devices=deviceDao.findDeviceDeviceType(type);//查询同一种设备类型
+//                deviceDao.deleteDevices(devices);
+//                List<Line2> lines2=deviceLineDao.findDeviceLines(name.trim());
+//                if (lines2.size()!=16){
+//                    deviceLineDao.deleteDeviceLines(name.trim());
+//                    for (int i = 1; i <17 ; i++) {
+//                        lines.add(new Line2(false,i+"路",0,false,i,name.trim()));
+//                    }
+//                    deviceLineDao.insertDeviceLines(lines);
+//                }
+//                Device device=new Device();
+//                device.setDeviceOnlyMac(name.trim());
+//                device.setSystem(type);
+//                device.setUserId(userId);
+//                if (deviceDao.insert(device)){
+//                    ToastUtil.show(this,"添加成功",Toast.LENGTH_SHORT);
+//                    Intent intent=new Intent(this,MainActivity.class);
+//                    startActivity(intent);
+//                }else {
+//                    ToastUtil.show(this,"添加失败",Toast.LENGTH_SHORT);
+//                }
                 break;
         }
     }
 
-
-    class AddDeivceAsync extends BaseWeakAsyncTask<Map<String,Object>,Void,Integer,QRScannerActivity> {
-
-        public AddDeivceAsync(QRScannerActivity activity) {
-            super(activity);
-        }
-
-        @Override
-        protected Integer doInBackground(QRScannerActivity activity,Map<String, Object>... maps) {
-            String url=HttpUtils.ipAddress+ "device/addDeviceByAPP";
-            Map<String,Object> params=maps[0];
-            int code=0;
-            try {
-                String result=HttpUtils.requestPost(url,params);
-                Log.i("result","-->"+result);
-                if (!TextUtils.isEmpty(result)){
-                    JSONObject jsonObject=new JSONObject(result);
-                    code=jsonObject.getInt("returnCode");
-                    if (code==100){
-                        JSONObject returnData=jsonObject.getJSONObject("returnData");
-                        String s=returnData.toString();
-//                        Gson gson=new Gson();
-//                        device=gson.fromJson(s, com.peihou.willgood2.pojo.Device.class);
-//                        String deviceMac=device.getDeviceOnlyMac();
-//                        device.setDeviceName(deviceName);
-//                        List<Device> deleteDevices=deviceDao.findDevicesByMac(deviceMac);
-//                        deviceDao.deleteDevices(deleteDevices);
-//                        deviceDao.insert(device);
-                    }
-                }
-            }catch (Exception e){
-                e.printStackTrace();
-            }
-            return code;
-        }
-
-        @Override
-        protected void onPostExecute(QRScannerActivity activity,Integer code) {
-            switch (code){
-                case 100:
-                    ToastUtil.showShort(QRScannerActivity.this,"添加成功");
-                    Intent intent=new Intent();
-//                    intent.putExtra("device",device);
-                    setResult(100,intent);
-                    finish();
-                    break;
-                case 10007:
-                    ToastUtil.showShort(QRScannerActivity.this,"对不起您的设备初始码错误，请重置后重新添加");
-                    break;
-                default:
-                    ToastUtil.showShort(QRScannerActivity.this,"添加失败");
-                    break;
-            }
-        }
-    }
 
     @Override
     protected void onPause() {
@@ -313,38 +284,20 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
             if (TextUtils.isEmpty(resultString)) {
                 Toast.makeText(QRScannerActivity.this, "扫描失败!", Toast.LENGTH_SHORT).show();
             } else {
-                String name=resultString;
-                if (TextUtils.isEmpty(name)){
-                    ToastUtil.show(this,"设备IMEI不能为空",Toast.LENGTH_SHORT);
+                String name = resultString;
+                if (TextUtils.isEmpty(name)) {
+                    ToastUtil.show(this, "设备IMEI不能为空", Toast.LENGTH_SHORT);
                     return;
                 }
-//                deviceDao.deleteAll();
-//                deviceLineDao.deleteAll();
-                List<Device> devices2=deviceDao.findDevicesByMac(name.trim());//查询同一个mac的所有设备
-                deviceDao.deleteDevices(devices2);
-                List<Device> devices=deviceDao.findDeviceDeviceType(type);//查询同一种设备类型
-                deviceDao.deleteDevices(devices);
-                List<Line2> lines2=deviceLineDao.findDeviceLines(name.trim());
-                if (lines2.size()!=16){
-                    deviceLineDao.deleteDeviceLines(name.trim());
-                    for (int i = 1; i <17 ; i++) {
-                        lines.add(new Line2(false,i+"路",0,false,i,name.trim()));
-                    }
-                    deviceLineDao.insertDeviceLines(lines);
-                }
-                Device device=new Device();
-                device.setDeviceOnlyMac(name.trim());
-                device.setSystem(type);
-                device.setUserId(userId);
-                if (deviceDao.insert(device)){
-                    ToastUtil.show(this,"添加成功",Toast.LENGTH_SHORT);
-                    Intent intent=new Intent(this,MainActivity.class);
-                    startActivity(intent);
-                }else {
-                    ToastUtil.show(this,"添加失败",Toast.LENGTH_SHORT);
-                }
+                rl_body4.setVisibility(View.GONE);
+                rl_body3.setVisibility(View.VISIBLE);
+                et_name.setText(name);
+                tv_wifi.setTextColor(Color.parseColor("#646464"));
+                tv_gprs.setTextColor(Color.parseColor("#09c585"));
+                et_name.setHint("请输入IMEI号");
+                et_pswd.setHint("请输入初始码");
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -443,28 +396,30 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
             mediaPlayer.seekTo(0);
         }
     };
-    private static final int RC_CAMERA_AND_LOCATION=0;
-    private boolean isNeedCheck=true;
+    private static final int RC_CAMERA_AND_LOCATION = 0;
+    private boolean isNeedCheck = true;
+
     @AfterPermissionGranted(RC_CAMERA_AND_LOCATION)
-    private void permissionGrantedSuccess(){
+    private void permissionGrantedSuccess() {
         String[] perms = {Manifest.permission.CAMERA};
         if (EasyPermissions.hasPermissions(this, perms)) {
 
         } else {
 //             没有申请过权限，现在去申请
-            if (isNeedCheck){
+            if (isNeedCheck) {
                 EasyPermissions.requestPermissions(this, getString(R.string.camer),
                         RC_CAMERA_AND_LOCATION, perms);
             }
         }
     }
+
     @TargetApi(23)
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         // 把执行结果的操作给EasyPermissions
         System.out.println(requestCode);
-        if (isNeedCheck){
+        if (isNeedCheck) {
             EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
         }
     }
@@ -485,7 +440,79 @@ public class QRScannerActivity extends BaseActivity implements SurfaceHolder.Cal
                     .setNegativeButton("取消")
                     .build()
                     .show();
-            isNeedCheck=false;
+            isNeedCheck = false;
         }
     }
+
+    int insert = 0;
+
+    class AddDeivceAsync extends BaseWeakAsyncTask<Map<String, Object>, Void, Integer, QRScannerActivity> {
+
+        public AddDeivceAsync(QRScannerActivity activity) {
+            super(activity);
+        }
+
+        @Override
+        protected Integer doInBackground(QRScannerActivity activity, Map<String, Object>... maps) {
+            String url = HttpUtils.ipAddress + "device/addDeviceByAPP";
+            Map<String, Object> params = maps[0];
+            String deviceMac = (String) params.get("deviceOnlyMac");
+            int code = 0;
+            try {
+                String result = HttpUtils.requestPost(url, params);
+                Log.i("result", "-->" + result);
+                if (!TextUtils.isEmpty(result)) {
+                    JSONObject jsonObject = new JSONObject(result);
+                    code = jsonObject.getInt("returnCode");
+                    if (code == 100 || code==10013) {
+                        JSONObject returnData = jsonObject.getJSONObject("returnData");
+                        String s = returnData.toString();
+                        Gson gson = new Gson();
+                        Device device = gson.fromJson(s, Device.class);
+                        List<Device> devices2 = deviceDao.findDevicesByMac(device.getDeviceOnlyMac());//查询同一个mac的所有设备
+                        deviceDao.deleteDevices(devices2);
+                        List<Device> devices = deviceDao.findDeviceDeviceType(type);//查询同一种设备类型
+                        deviceDao.deleteDevices(devices);
+                        List<Line2> lines2 = deviceLineDao.findDeviceLines(device.getDeviceOnlyMac());
+                        if (lines2.size() != 16) {
+                            deviceLineDao.deleteDeviceLines(device.getDeviceOnlyMac());
+                            for (int i = 1; i < 17; i++) {
+                                lines.add(new Line2(false, i + "路", 0, false, i, device.getDeviceOnlyMac()));
+                            }
+                            deviceLineDao.insertDeviceLines(lines);
+                        }
+                        device.setSystem(type);
+                        device.setUserId(userId);
+                        deviceDao.insert(device);
+                        code=100;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return code;
+        }
+
+        @Override
+        protected void onPostExecute(QRScannerActivity activity, Integer code) {
+            switch (code) {
+                case 100:
+                    ToastUtil.showShort(QRScannerActivity.this, "添加成功");
+                    ToastUtil.show(QRScannerActivity.this, "添加成功", Toast.LENGTH_SHORT);
+                    Intent intent = new Intent(QRScannerActivity.this, MainActivity.class);
+                    startActivity(intent);
+                    break;
+                case 10007:
+                    ToastUtil.showShort(QRScannerActivity.this, "对不起您的设备初始码错误，请重置后重新添加");
+                    break;
+                case 10014:
+                    ToastUtil.showShort(QRScannerActivity.this, "该设备已被他人添加!");
+                    break;
+                default:
+                    ToastUtil.showShort(QRScannerActivity.this, "添加失败");
+                    break;
+            }
+        }
+    }
+
 }

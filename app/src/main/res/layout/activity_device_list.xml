@@ -62,7 +62,7 @@
                 android:id="@+id/tv_ps"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="配电系统"
+                android:text="添加配电系统"
                 android:textSize="@dimen/sp_16"
                 android:gravity="center"
                 android:layout_marginLeft="@dimen/dp_30"
@@ -96,7 +96,7 @@
                 android:id="@+id/tv_ks"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="控制系统"
+                android:text="添加控制系统"
                 android:textSize="@dimen/sp_16"
                 android:gravity="center"
                 android:layout_marginLeft="@dimen/dp_30"
@@ -114,5 +114,74 @@
                 android:layout_marginRight="@dimen/dp_30"
                 />
         </RelativeLayout>
+        <RelativeLayout
+           android:layout_below="@+id/rl_ks"
+            android:id="@+id/rl_ps2"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dp_65"
+            >
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@mipmap/img_ps"
+                android:scaleType="centerCrop"
+                />
+            <TextView
+                android:id="@+id/tv_ps2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="删除配电系统"
+                android:textSize="@dimen/sp_16"
+                android:gravity="center"
+                android:layout_marginLeft="@dimen/dp_30"
+                android:layout_marginTop="@dimen/dp_18"
+                android:textColor="#4b4b4b"
+                />
+            <ImageView
+                android:id="@+id/image_right_ps2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@mipmap/right_arrow_black"
+                android:scaleType="centerCrop"
+                android:layout_marginTop="@dimen/dp_20"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="@dimen/dp_30"
+                />
+        </RelativeLayout>
+        <RelativeLayout
+            android:layout_below="@+id/rl_ps2"
+            android:id="@+id/rl_kz2"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dp_65"
+            >
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@mipmap/img_ps"
+                android:scaleType="centerCrop"
+                />
+            <TextView
+                android:id="@+id/tv_kz"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="删除控制系统"
+                android:textSize="@dimen/sp_16"
+                android:gravity="center"
+                android:layout_marginLeft="@dimen/dp_30"
+                android:layout_marginTop="@dimen/dp_18"
+                android:textColor="#4b4b4b"
+                />
+            <ImageView
+                android:id="@+id/image_right_kz"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@mipmap/right_arrow_black"
+                android:scaleType="centerCrop"
+                android:layout_marginTop="@dimen/dp_20"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="@dimen/dp_30"
+                />
+        </RelativeLayout>
     </RelativeLayout>
+
 </RelativeLayout>

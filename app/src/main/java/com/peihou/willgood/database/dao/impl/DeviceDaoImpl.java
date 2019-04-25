@@ -20,10 +20,9 @@ import java.util.List;
 public class DeviceDaoImpl {
     int userId;
     private DeviceDao deviceDao;
-
+    Context context;
     public DeviceDaoImpl(Context context) {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("userInfo2", Context.MODE_PRIVATE);
-        userId = sharedPreferences.getInt("userId", 0);
+        this.context=context;
         DBManager dbManager=DBManager.getInstance(context);//获取数据库管理者单例对象
         DaoSession session=dbManager.getDaoSession();//获取数据库会话对象
         deviceDao=session.getDeviceDao();
@@ -88,6 +87,8 @@ public class DeviceDaoImpl {
     }
 
     public Device findDeviceByType(int type){
+        SharedPreferences sharedPreferences = context.getSharedPreferences("userInfo2", Context.MODE_PRIVATE);
+        userId = sharedPreferences.getInt("userId", 0);
         WhereCondition whereCondition=deviceDao.queryBuilder().and(DeviceDao.Properties.System.eq(type),DeviceDao.Properties.UserId.eq(userId));
         return deviceDao.queryBuilder().where(whereCondition).unique();
     }
@@ -98,11 +99,16 @@ public class DeviceDaoImpl {
      * @return
      */
     public List<Device> findDevicesByMac(String deviceMac) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("userInfo2", Context.MODE_PRIVATE);
+        userId = sharedPreferences.getInt("userId", 0);
         WhereCondition whereCondition=deviceDao.queryBuilder().and(DeviceDao.Properties.UserId.eq(userId), DeviceDao.Properties.DeviceOnlyMac.eq(deviceMac));
         return deviceDao.queryBuilder().where(whereCondition).list();
     }
 
     public Device findDeviceByMac(String deviceMac) {
+        Log.i("userId","-->"+userId);
+        SharedPreferences sharedPreferences = context.getSharedPreferences("userInfo2", Context.MODE_PRIVATE);
+        userId = sharedPreferences.getInt("userId", 0);
         WhereCondition whereCondition=deviceDao.queryBuilder().and(DeviceDao.Properties.DeviceOnlyMac.eq(deviceMac),DeviceDao.Properties.UserId.eq(userId));
         return deviceDao.queryBuilder().where(whereCondition).unique();
     }
@@ -113,6 +119,8 @@ public class DeviceDaoImpl {
      * @return
      */
     public List<Device> findDeviceDeviceType(int type){
+        SharedPreferences sharedPreferences = context.getSharedPreferences("userInfo2", Context.MODE_PRIVATE);
+        userId = sharedPreferences.getInt("userId", 0);
         WhereCondition whereCondition=deviceDao.queryBuilder().and(DeviceDao.Properties.UserId.eq(userId),DeviceDao.Properties.System.eq(type));
         return deviceDao.queryBuilder().where(whereCondition).list();
     }
@@ -123,6 +131,8 @@ public class DeviceDaoImpl {
      * @return
      */
     public List<Device> findAllDevice() {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("userInfo2", Context.MODE_PRIVATE);
+        userId = sharedPreferences.getInt("userId", 0);
         return deviceDao.queryBuilder().where(DeviceDao.Properties.UserId.eq(userId)).list();
     }
 }

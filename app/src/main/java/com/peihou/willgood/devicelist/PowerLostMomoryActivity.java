@@ -85,7 +85,7 @@ public class PowerLostMomoryActivity extends BaseActivity {
 
     int open = -1;//1为打开掉电记忆，0为关闭掉电记忆
     int click=0;//1为点击过，0没有点击过开关按钮
-
+    int click2=0;
     @OnClick({R.id.img_back, R.id.img_open})
     public void onClick(View v) {
         switch (v.getId()) {
@@ -106,7 +106,10 @@ public class PowerLostMomoryActivity extends BaseActivity {
                     open=0;
                     img_open.setImageResource(R.mipmap.img_close);
                     plMemory=0;
+
                 }else {
+
+
                     open=1;
                     img_open.setImageResource(R.mipmap.img_open);
                     plMemory=1;
@@ -116,6 +119,9 @@ public class PowerLostMomoryActivity extends BaseActivity {
                     device.setPlMemory(plMemory);
                     mqService.sendBasic(topicName,device);
                     countTimer.start();
+                    click2=1;
+
+
                 }
                 break;
         }
@@ -238,9 +244,13 @@ public class PowerLostMomoryActivity extends BaseActivity {
                 if (plMemory == 0) {
                     open = 0;
                     img_open.setImageResource(R.mipmap.img_close);
+
                 } else if (plMemory == 1) {
                     open = 1;
                     img_open.setImageResource(R.mipmap.img_open);
+                }
+                if (mqService!=null && click2==1){
+                    mqService.starSpeech(deviceMac,3);
                 }
 
             }

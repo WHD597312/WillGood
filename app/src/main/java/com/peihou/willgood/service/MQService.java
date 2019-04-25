@@ -147,10 +147,10 @@ public class MQService extends Service {
         preferences = getSharedPreferences("my", Context.MODE_PRIVATE);
         deviceDao = new DeviceDaoImpl(getApplicationContext());
         List<Device> devices = deviceDao.findAllDevice();
-        for (Device device : devices) {
-            String deviceMac = device.getDeviceOnlyMac();
-            addCountTimer(deviceMac);
-        }
+//        for (Device device : devices) {
+//            String deviceMac = device.getDeviceOnlyMac();
+//            addCountTimer(deviceMac);
+//        }
         deviceAlermDao = new DeviceAlermDaoImpl(getApplicationContext());
         deviceLineDao = new DeviceLineDaoImpl(getApplicationContext());
         timerTaskDao = new TimerTaskDaoImpl(getApplicationContext());
@@ -163,20 +163,34 @@ public class MQService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && intent.hasExtra("restart")) {
-            int restart = intent.getIntExtra("restart", 0);
-            Log.i("restart", "-->" + restart);
-            if (restart == 1) {
-                connect(1);
-            }
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            NotificationChannel channel = new NotificationChannel(PUSH_CHANNEL_ID, PUSH_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH);
+//            if (mNotificationManager != null) {
+//                mNotificationManager.createNotificationChannel(channel);
+//            }
+//        }
+//
+//        NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(),PUSH_CHANNEL_ID);
+//        Notification notification = builder.build();notification.flags= Notification.FLAG_FOREGROUND_SERVICE;
+//        startForeground(0,notification);Log.i("Service","UnreadMessageServices onStartCommand"); if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+//            Notification notification = new Notification.Builder(this, PUSH_CHANNEL_ID).setVisibility(Notification.VISIBILITY_PRIVATE).
+//
+//                    build();
+            startForeground(1,new Notification());
         }
-        return START_STICKY;
+        connect(1);
+
+
+        return super.onStartCommand(intent,flags,startId);
+
     }
 
     public class LocalBinder extends Binder {
         public MQService getService() {
             Log.i(TAG, "Binder");
-            connect(0);
             return MQService.this;
         }
     }
@@ -204,7 +218,7 @@ public class MQService extends Service {
             }
             if (state == 1) {
                 new ConAsync(MQService.this).execute();
-                countTime2.start();
+//                countTime2.start();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -221,7 +235,7 @@ public class MQService extends Service {
         deviceAlermDao.deleteAll();
         alerms.clear();
         moniMap.clear();
-        countTimers.clear();
+//        countTimers.clear();
         removeOfflineDevices();
     }
 
@@ -256,15 +270,15 @@ public class MQService extends Service {
         deviceLineDao.update(list);
     }
 
-    class ConAsync extends BaseWeakAsyncTask<Void, Void, Void, MQService> {
+    class ConAsync extends BaseWeakAsyncTask<Void, Void, Integer, MQService> {
 
         public ConAsync(MQService mqService) {
             super(mqService);
         }
 
         @Override
-        protected Void doInBackground(MQService mqService, Void... voids) {
-
+        protected Integer doInBackground(MQService mqService, Void... voids) {
+            int code=0;
             try {
                 if (client.isConnected() == false) {
                     client.connect(options);
@@ -278,16 +292,19 @@ public class MQService extends Service {
                             Log.i("client", "-->" + topicName);
                         }
                     }
+                    code=100;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            return null;
+            return code;
         }
 
         @Override
-        protected void onPostExecute(MQService mqService, Void aVoid) {
-
+        protected void onPostExecute(MQService mqService, Integer code) {
+            if (code==100){
+                new LoadDataAsync(MQService.this).execute(devices);
+            }
         }
     }
 
@@ -330,6 +347,11 @@ public class MQService extends Service {
         }
     }
 
+    public void stopMedia(){
+        if (mediaPlayer!=null){
+            mediaPlayer.reset();
+        }
+    }
     public void unsubscribeAll(List<Device> devices) {
         try {
             for (Device device : devices) {
@@ -597,6 +619,7 @@ public class MQService extends Service {
             CountTimer countTimer2 = null;
             int location = 0;
             int plMemory = 0;
+            int firstLineSwitch=-1;
             try {
                 if (topicName.contains("client_to_server")) {
                     int funCode = data[1];
@@ -686,6 +709,7 @@ public class MQService extends Service {
                             int[] x = TenTwoUtil.changeToTwo(prelines);
                             int[] x2 = TenTwoUtil.changeToTwo(lastlines);
                             int[] x3 = TenTwoUtil.changeToTwo(prelineswitch);
+                            firstLineSwitch=x3[0];
                             int[] x4 = TenTwoUtil.changeToTwo(lastlineswitch);
                             int[] x5 = TenTwoUtil.changeToTwo(prelinesjog);
                             int[] x6 = TenTwoUtil.changeToTwo(lastlinesjog);
@@ -786,6 +810,7 @@ public class MQService extends Service {
                             deviceDao.update(device);
                             offlineDevices.put(macAddress, device);
 
+                            Log.i("preLineSwitch","--->"+prelineswitch);
 
                             lines2 = sb.toString() + "";
                             if (!TextUtils.isEmpty(lines2)) {
@@ -799,12 +824,12 @@ public class MQService extends Service {
                         }
 
 
-                        for (CountTimer countTimer : countTimers) {
-                            if (macAddress.equals(countTimer.getMacArress()) && countTimer.getMillisUntilFinished() <= 1) {
-                                countTimer2 = countTimer;
-                                break;
-                            }
-                        }
+//                        for (CountTimer countTimer : countTimers) {
+//                            if (macAddress.equals(countTimer.getMacArress()) && countTimer.getMillisUntilFinished() <= 1) {
+//                                countTimer2 = countTimer;
+//                                break;
+//                            }
+//                        }
 
                     } else if (funCode == 0x22) {
                         int mcuVersion = data[2];
@@ -1773,6 +1798,7 @@ public class MQService extends Service {
                         Intent intent = new Intent("MainActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("device", device);
+                        intent.putExtra("firstLineSwitch",firstLineSwitch);
                         sendBroadcast(intent);
 
                     }  else if (PowerLostMomoryActivity.running && funCode == 0x11) {
@@ -1877,66 +1903,66 @@ public class MQService extends Service {
         }, 0, 1000, TimeUnit.MILLISECONDS);
     }
 
-    public void addCountTimer(String macAddress) {
-        for (CountTimer timer : countTimers) {
-            Log.e("addCountTimer", "-->" + macAddress);
-            String deviceMac = timer.getMacArress();
-            if (macAddress.equals(deviceMac)) {
-                return;
-            }
-        }
-        Message msg = handler.obtainMessage();
-        msg.what = 10005;
-        msg.obj = macAddress;
-        handler.sendMessage(msg);
-    }
+//    public void addCountTimer(String macAddress) {
+//        for (CountTimer timer : countTimers) {
+//            Log.e("addCountTimer", "-->" + macAddress);
+//            String deviceMac = timer.getMacArress();
+//            if (macAddress.equals(deviceMac)) {
+//                return;
+//            }
+//        }
+//        Message msg = handler.obtainMessage();
+//        msg.what = 10005;
+//        msg.obj = macAddress;
+//        handler.sendMessage(msg);
+//    }
 
-    public void clearCountTimer() {
-        countTimers.clear();
-    }
+//    public void clearCountTimer() {
+//        countTimers.clear();
+//    }
 
-    public void revoveCountTimer(String deviceMac) {
-        for (CountTimer timer : countTimers) {
-            String macAddress = timer.getMacArress();
-            if (deviceMac.equals(macAddress)) {
-                countTimers.remove(timer);
-                break;
-            }
-        }
-    }
+//    public void revoveCountTimer(String deviceMac) {
+//        for (CountTimer timer : countTimers) {
+//            String macAddress = timer.getMacArress();
+//            if (deviceMac.equals(macAddress)) {
+//                countTimers.remove(timer);
+//                break;
+//            }
+//        }
+//    }
 
-    List<CountTimer> countTimers = new LinkedList<>();
+//    List<CountTimer> countTimers = new LinkedList<>();
 
-    CountTime2 countTime2 = new CountTime2(2000, 1000);
+//    CountTime2 countTime2 = new CountTime2(2000, 1000);
 
-    class CountTime2 extends CountDownTimer {
-
-        /**
-         * @param millisInFuture    The number of millis in the future from the call
-         *                          to {@link #start()} until the countdown is done and {@link #onFinish()}
-         *                          is called.
-         * @param countDownInterval The interval along the way to receive
-         *                          {@link #onTick(long)} callbacks.
-         */
-        public CountTime2(long millisInFuture, long countDownInterval) {
-            super(millisInFuture, countDownInterval);
-        }
-
-        @Override
-        public void onTick(long millisUntilFinished) {
-            Log.i("CountTime2", "-->" + millisUntilFinished / 1000);
-        }
-
-        @Override
-        public void onFinish() {
-            if (deviceDao != null) {
-                List<Device> devices = deviceDao.findAllDevice();
-                if (!devices.isEmpty()) {
-                    new LoadDataAsync(MQService.this).execute(devices);
-                }
-            }
-        }
-    }
+//    class CountTime2 extends CountDownTimer {
+//
+//        /**
+//         * @param millisInFuture    The number of millis in the future from the call
+//         *                          to {@link #start()} until the countdown is done and {@link #onFinish()}
+//         *                          is called.
+//         * @param countDownInterval The interval along the way to receive
+//         *                          {@link #onTick(long)} callbacks.
+//         */
+//        public CountTime2(long millisInFuture, long countDownInterval) {
+//            super(millisInFuture, countDownInterval);
+//        }
+//
+//        @Override
+//        public void onTick(long millisUntilFinished) {
+//            Log.i("CountTime2", "-->" + millisUntilFinished / 1000);
+//        }
+//
+//        @Override
+//        public void onFinish() {
+//            if (deviceDao != null) {
+//                List<Device> devices = deviceDao.findAllDevice();
+//                if (!devices.isEmpty()) {
+//                    new LoadDataAsync(MQService.this).execute(devices);
+//                }
+//            }
+//        }
+//    }
 
     class LoadDataAsync extends BaseWeakAsyncTask<List<Device>, Void, Integer, MQService> {
 
@@ -2154,10 +2180,18 @@ public class MQService extends Service {
      *
      * @return
      */
+    List<Device> devices = new ArrayList<>();
     public List<String> getTopicNames() {
+        devices.clear();
         List<String> topicNames = new ArrayList<>();
-        List<Device> devices = deviceDao.findAllDevice();
-
+        Device devic3=deviceDao.findDeviceByType(1);
+        Device device4=deviceDao.findDeviceByType(2);
+        if (devic3!=null){
+            devices.add(devic3);
+        }
+        if (device4!=null){
+            devices.add(device4);
+        }
         for (Device device : devices) {
             String mac = device.getDeviceOnlyMac();
             String server = "qjjc/gateway/" + mac + "/client_to_server";
@@ -2343,10 +2377,7 @@ public class MQService extends Service {
     public void starSpeech(String deviceMac, int type) {
 
         // 2.合成参数设置，详见《科大讯飞MSC API手册(Android)》SpeechSynthesizer 类
-        Device device = deviceDao.findDeviceByMac(deviceMac);
-        if (device != null && device.getVlice2() == 1) {
-            startVoice(type);
-        }
+        startVoice(type);
         // 合成监听器
         //
 
@@ -2986,8 +3017,8 @@ public class MQService extends Service {
     private PowerManager.WakeLock wl;
 
     private static final int PUSH_NOTIFICATION_ID = (0x001);
-    private static final String PUSH_CHANNEL_ID = "PUSH_NOTIFY_ID";
-    private static final String PUSH_CHANNEL_NAME = "PUSH_NOTIFY_NAME";
+    private static final String PUSH_CHANNEL_ID = "PUSH_NOTIFY_ID2";
+    private static final String PUSH_CHANNEL_NAME = "PUSH_NOTIFY_NAME2";
 
 
     private void wakeAndUnlock(boolean b, int type) {
@@ -3105,10 +3136,10 @@ public class MQService extends Service {
                     }
                 }
             } else if (msg.what == 10005) {
-                String macAddress = (String) msg.obj;
-                CountTimer countTimer = new CountTimer(1000 * 60 * 5 * 6, 1000);
-                countTimer.setMacArress(macAddress);
-                countTimers.add(countTimer);
+//                String macAddress = (String) msg.obj;
+//                CountTimer countTimer = new CountTimer(1000 * 60 * 5 * 6, 1000);
+//                countTimer.setMacArress(macAddress);
+//                countTimers.add(countTimer);
             }
 //            } else if (msg.what == 10005) {
 //                Log.i("tttttttttttttttttttttt", "llllllllllllllllll");
@@ -3125,9 +3156,9 @@ public class MQService extends Service {
      */
     int soundCount = 0;
     int soundType = 0;
-
     public void startVoice(int type) {
         try {
+            Log.i("startVoice","-->"+type);
             soundType = type;
             mediaPlayer.reset();
             if (type == 0) {
@@ -3141,7 +3172,6 @@ public class MQService extends Service {
                 mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
                 mediaPlayer.prepare();
                 mediaPlayer.start();
-
                 file.close();
             } else if (type == 2) {
                 AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.control);
@@ -3160,6 +3190,7 @@ public class MQService extends Service {
                 mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
                 mediaPlayer.prepare();
                 mediaPlayer.start();
+                file.close();
                 soundCount = 1;
                 mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     @Override
@@ -3190,6 +3221,7 @@ public class MQService extends Service {
                 mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
                 mediaPlayer.prepare();
                 mediaPlayer.start();
+                file.close();
                 soundCount = 1;
                 mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     @Override
@@ -3222,6 +3254,7 @@ public class MQService extends Service {
                 mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
                 mediaPlayer.prepare();
                 mediaPlayer.start();
+                file.close();
                 soundCount = 1;
                 mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     @Override

@@ -36,8 +36,10 @@ import com.peihou.willgood.util.TenTwoUtil;
 import com.peihou.willgood.util.ToastUtil;
 
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import butterknife.BindView;
@@ -208,6 +210,21 @@ public class AddTimeActivity extends BaseActivity {
                 int preLine = 0;
                 int lastLine = 0;
                 if (only == 0) {
+                    Calendar calendar=Calendar.getInstance();
+                    calendar.set(Calendar.YEAR, year);
+                    calendar.set(Calendar.MONTH, month-1);
+                    calendar.set(Calendar.DAY_OF_MONTH, day);
+                    calendar.set(Calendar.HOUR_OF_DAY,hour);
+                    calendar.set(Calendar.MINUTE,min);
+                    Date date=calendar.getTime();
+                    long time=date.getTime();
+                    Calendar calendar2=Calendar.getInstance();
+                    Date date2=calendar2.getTime();
+                    long timer2=date2.getTime();
+                    if (time<timer2){
+                        ToastUtil.showShort(this,"请设置合理的定时时间");
+                        break;
+                    }
                     sb.setLength(0);
                     int[] preLines = new int[8];
                     int[] lastLines = new int[8];
@@ -605,7 +622,6 @@ public class AddTimeActivity extends BaseActivity {
                                 sss = "0" + min;
                             }
                             time = year + "-" + ss + "-" + day1 + " " + ss1 + ":" + sss;
-
                             tv_timer_value.setText(time);
                         } else {
                             String time = "";

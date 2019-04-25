@@ -70,7 +70,17 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-
+        boolean running2= ServiceUtils.isServiceRunning(this,"com.peihou.willgood.service.MQService");
+        Log.i("ServiceUtils","-->"+running2);
+        if (!running2){
+            Intent intent=new Intent(this, MQService.class);
+            intent.putExtra("restart",1);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent);
+            }else {
+                startService(intent);
+            }
+        }
     }
 
 

@@ -12,7 +12,7 @@ MobSDK {
     SMSSDK {}
 }
 greendao {
-    schemaVersion 17
+    schemaVersion 22
     daoPackage 'com.peihou.willgood.database.dao'
     targetGenDir 'src/main/java'
 }
@@ -41,8 +41,8 @@ android {
         applicationId "com.peihou.willgood"
         minSdkVersion 21
         targetSdkVersion 27
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "2.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
         renderscriptSupportModeEnabled true

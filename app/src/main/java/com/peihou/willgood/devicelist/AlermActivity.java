@@ -141,6 +141,8 @@ public class AlermActivity extends BaseActivity {
     protected void onResume() {
         super.onResume();
         if (mqService!=null){
+            mqService.connectMqtt(deviceMac);
+
             List<Alerm> alerms=deviceAlermDao.findDeviceAlerms(deviceMac);
             list.clear();
             list.addAll(alerms);

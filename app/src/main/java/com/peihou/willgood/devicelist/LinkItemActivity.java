@@ -163,6 +163,7 @@ public class LinkItemActivity extends BaseActivity {
     protected void onResume() {
         super.onResume();
         if (mqService != null && returnData==0) {
+            mqService.connectMqtt(deviceMac);
             list.clear();
             adapter.notifyDataSetChanged();
             int funCode = 0;

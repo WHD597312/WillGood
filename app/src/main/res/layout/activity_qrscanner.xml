@@ -159,7 +159,6 @@
                 android:textSize="@dimen/sp_16"
                 android:inputType="textVisiblePassword"
                 android:textColor="#646464"
-                android:visibility="gone"
                 />
             <EditText
                 android:visibility="gone"
