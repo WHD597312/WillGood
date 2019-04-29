@@ -37,11 +37,13 @@ public class PowerLostMomoryActivity extends BaseActivity {
     int plMemory;
     @BindView(R.id.tv_name) TextView tv_name;
     int type=0;
+    private Device device;
     @Override
     public void initParms(Bundle parms) {
         deviceMac = parms.getString("deviceMac");
         plMemory = parms.getInt("plMemory");
         type=parms.getInt("type");
+        device= (Device) parms.getSerializable("device");
     }
 
     @Override
@@ -104,24 +106,22 @@ public class PowerLostMomoryActivity extends BaseActivity {
                 click=1;
                 if (open==1){
                     open=0;
-                    img_open.setImageResource(R.mipmap.img_close);
+//                    img_open.setImageResource(R.mipmap.img_close);
                     plMemory=0;
 
                 }else {
-
-
                     open=1;
-                    img_open.setImageResource(R.mipmap.img_open);
+//                    img_open.setImageResource(R.mipmap.img_open);
                     plMemory=1;
                 }
-                Device device=mqService.getDeviceByMac(deviceMac);
                 if (device!=null){
+//                    device.setDeviceState(0);
+//                    device.setPrelinesjog(0);
+//                    device.setLastlinesjog(0);
                     device.setPlMemory(plMemory);
-                    mqService.sendBasic(topicName,device);
+                    mqService.sendBasic(topicName,device,0x03);
                     countTimer.start();
                     click2=1;
-
-
                 }
                 break;
         }
@@ -240,7 +240,7 @@ public class PowerLostMomoryActivity extends BaseActivity {
             String macAddress = intent.getStringExtra("macAddress");
             if (macAddress.equals(deviceMac)) {
                 plMemory = intent.getIntExtra("plMemory", 0);
-
+                device= (Device) intent.getSerializableExtra("device");
                 if (plMemory == 0) {
                     open = 0;
                     img_open.setImageResource(R.mipmap.img_close);
@@ -251,8 +251,8 @@ public class PowerLostMomoryActivity extends BaseActivity {
                 }
                 if (mqService!=null && click2==1){
                     mqService.starSpeech(deviceMac,3);
+                    click2=0;
                 }
-
             }
         }
     }

@@ -16,6 +16,9 @@ import com.android.volley.toolbox.Volley;
 import com.baidu.mapapi.CoordType;
 import com.baidu.mapapi.SDKInitializer;
 import com.mob.MobSDK;
+//import com.peihou.willgood.daemon.DaemonHolder;
+import com.peihou.willgood.daemon.DaemonHolder;
+import com.peihou.willgood.service.MQService;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -48,10 +51,11 @@ public class MyApplication extends Application {
     public void onCreate() {
         super.onCreate();
         //在使用SDK各组件之前初始化context信息，传入ApplicationContext
+        DaemonHolder.init(this, MQService.class);
         JPushInterface.setDebugMode(true);
         JPushInterface.init(this);
         disableAPIDialog();
-        createNotificationChannel();
+//        createNotificationChannel();
         String registrationID=JPushInterface.getRegistrationID(this);
         Log.i("registrationIDqqq","-->"+registrationID);
         MobSDK.init(this);

@@ -157,13 +157,8 @@ public class LinkItemActivity extends BaseActivity {
     protected void onStart() {
         super.onStart();
         running = true;
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
         if (mqService != null && returnData==0) {
-            mqService.connectMqtt(deviceMac);
+//            mqService.connectMqtt(deviceMac);
             list.clear();
             adapter.notifyDataSetChanged();
             int funCode = 0;
@@ -184,6 +179,12 @@ public class LinkItemActivity extends BaseActivity {
             countTimer.start();
             returnData=0;
         }
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
 
     }
 

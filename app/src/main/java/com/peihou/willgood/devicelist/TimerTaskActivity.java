@@ -114,13 +114,8 @@ public class TimerTaskActivity extends BaseActivity {
     protected void onStart() {
         super.onStart();
         running=true;
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
         if (mqService!=null && returnData==0){
-            mqService.connectMqtt(deviceMac);
+//            mqService.connectMqtt(deviceMac);
             timerTasks.clear();
             adapter.notifyDataSetChanged();
             List<TimerTask> timerTasks=mqService.getTimerTask(deviceMac);
@@ -134,6 +129,12 @@ public class TimerTaskActivity extends BaseActivity {
 //            timerTasks.addAll(timerTasks2);
             returnData=0;
         }
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
 
     }
 

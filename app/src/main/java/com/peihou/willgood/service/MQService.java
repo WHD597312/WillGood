@@ -33,6 +33,7 @@ import com.peihou.willgood.R;
 import com.peihou.willgood.activity.MainActivity;
 import com.peihou.willgood.base.MyApplication;
 import com.peihou.willgood.custom.AlermDialog4;
+import com.peihou.willgood.daemon.AbsHeartBeatService;
 import com.peihou.willgood.database.dao.impl.DeviceAlermDaoImpl;
 import com.peihou.willgood.database.dao.impl.DeviceDaoImpl;
 import com.peihou.willgood.database.dao.impl.DeviceLineDaoImpl;
@@ -85,7 +86,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class MQService extends Service {
+public class MQService extends AbsHeartBeatService {
 
     private String TAG = "MQService";
     private String host = "tcp://47.111.101.184:1883";//mqtt连接服务端ip
@@ -146,7 +147,7 @@ public class MQService extends Service {
         registerReceiver(reciiver, intentFilter);
         preferences = getSharedPreferences("my", Context.MODE_PRIVATE);
         deviceDao = new DeviceDaoImpl(getApplicationContext());
-        List<Device> devices = deviceDao.findAllDevice();
+//        List<Device> devices = deviceDao.findAllDevice();
 //        for (Device device : devices) {
 //            String deviceMac = device.getDeviceOnlyMac();
 //            addCountTimer(deviceMac);
@@ -174,13 +175,6 @@ public class MQService extends Service {
 //        Notification notification = builder.build();notification.flags= Notification.FLAG_FOREGROUND_SERVICE;
 //        startForeground(0,notification);Log.i("Service","UnreadMessageServices onStartCommand"); if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
 
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
-//            Notification notification = new Notification.Builder(this, PUSH_CHANNEL_ID).setVisibility(Notification.VISIBILITY_PRIVATE).
-//
-//                    build();
-            startForeground(1,new Notification());
-        }
         connect(1);
 
 
@@ -210,6 +204,30 @@ public class MQService extends Service {
         }
     }
 
+    @Override
+    public void onStartService() {
+        Log.d(TAG, "onStartService()");
+    }
+
+    @Override
+    public void onStopService() {
+        Log.e(TAG, "onStopService()");
+    }
+
+    @Override
+    public long getDelayExecutedMillis() {
+        return 0;
+    }
+
+    @Override
+    public long getHeartBeatMillis() {
+        return 30 * 1000;
+    }
+
+    @Override
+    public void onHeartBeat() {
+        Log.d(TAG, "onHeartBeat()");
+    }
 
     public void connect(int state) {
         try {
@@ -1782,8 +1800,8 @@ public class MQService extends Service {
                         String cotent = alerm.getContent();
                         Message msg = handler.obtainMessage();
                         msg.what = 10004;
-                        msg.arg1 = type;
-                        msg.arg2 = 1;
+                        msg.arg1 = type;//报警类型
+                        msg.arg2 = 1;//报警次数
                         msg.obj = cotent;
                         handler.sendMessage(msg);
                     } else if (funCode == 0xaa) {
@@ -1805,6 +1823,7 @@ public class MQService extends Service {
                         Intent intent = new Intent("PowerLostMomoryActivity");
                         intent.putExtra("macAddress", macAddress);
                         intent.putExtra("plMemory", plMemory);
+                        intent.putExtra("device",device);
                         sendBroadcast(intent);
                     } else if (TimerTaskActivity.running && funCode == 0x22) {
                         Intent intent = new Intent("TimerTaskActivity");
@@ -2512,7 +2531,7 @@ public class MQService extends Service {
      * @param topicName
      * @param device
      */
-    public boolean sendBasic(String topicName, Device device) {
+    public boolean sendBasic(String topicName, Device device,int operate) {
         boolean success = false;
         try {
             int mcuVersion = device.getMcuVersion();
@@ -2546,6 +2565,7 @@ public class MQService extends Service {
             datas[9] = (byte) prelinesjog;
             datas[10] = (byte) lastlinesjog;
             datas[11] = (byte) plMemory;
+            datas[12]= (byte) operate;
             int sum = 0;
             for (int i = 0; i < datas.length; i++) {
                 sum += datas[i];
@@ -3054,7 +3074,7 @@ public class MQService extends Service {
 
                 NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(),PUSH_CHANNEL_ID);
                 builder.setSmallIcon(R.mipmap.logo)
-                        .setContentTitle("迈科智联")
+                        .setContentTitle("LED云管家")
                         .setContentText("你有一条报警信息,请及时处理")
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)// 设置为public后，通知栏将在锁屏界面显示
@@ -3116,24 +3136,13 @@ public class MQService extends Service {
                 }
                 setAlermDialog(type, line);
             } else if (msg.what == 10004) {
-                int arg1 = msg.arg1;
-                int arg2 = msg.arg2;
-                if (arg2 == 1) {
-                    if (arg1 == 0) {
-                        startVoice(4);
-                    } else if (arg1 == 1) {
-                        startVoice(6);
-                    } else {
-                        startVoice(5);
-                    }
-                } else if (arg2 == 2) {
-                    if (arg1 == 0) {
-                        startVoice(4, true);
-                    } else if (arg1 == 1) {
-                        startVoice(6, true);
-                    } else {
-                        startVoice(5, true);
-                    }
+                int type = msg.arg1;//报警类型
+                if (type == 0) {
+                    startVoice(4);//来电报警
+                } else if (type == 1) {
+                    startVoice(5);//断电报警
+                } else if (type>1){
+                    startVoice(6);//其他报警
                 }
             } else if (msg.what == 10005) {
 //                String macAddress = (String) msg.obj;
@@ -3217,7 +3226,7 @@ public class MQService extends Service {
                 file.close();
 
             } else if (type == 5) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_other);
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_close);
                 mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
                 mediaPlayer.prepare();
                 mediaPlayer.start();
@@ -3232,7 +3241,7 @@ public class MQService extends Service {
                                 return;
                             } else if (soundCount < 3 && soundType == 5) {
                                 mediaPlayer.reset();
-                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_other);
+                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_close);
                                 mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
                                 mediaPlayer.prepare();
                                 mediaPlayer.start();
@@ -3250,7 +3259,7 @@ public class MQService extends Service {
 
 
             } else if (type == 6) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_close);
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_other);
                 mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
                 mediaPlayer.prepare();
                 mediaPlayer.start();
@@ -3264,7 +3273,7 @@ public class MQService extends Service {
                                 soundCount = 3;
                             } else if (soundCount < 3 && soundType == 6) {
                                 mediaPlayer.reset();
-                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_close);
+                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_other);
                                 mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
                                 mediaPlayer.prepare();
                                 mediaPlayer.start();

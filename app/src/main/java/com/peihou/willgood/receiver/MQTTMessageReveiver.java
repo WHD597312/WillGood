@@ -28,19 +28,6 @@ public class MQTTMessageReveiver extends BroadcastReceiver {
         if (intent!=null){
             Log.i("JPushReceiver","-->"+intent.getAction());
         }
-        if (intent!=null && intent.getAction().equals(Intent.ACTION_TIME_TICK)){
-            boolean running2= ServiceUtils.isServiceRunning(context,"com.peihou.willgood.service.MQService");
-            Log.i("ServiceUtils","-->"+running2);
-            if (!running2){
-                Intent intent2=new Intent(context, MQService.class);
-                intent.putExtra("restart",1);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent);
-                }else {
-                    context.startService(intent);
-                }
-            }
-        }
         if (!mobNetInfo.isConnected() && !wifiNetInfo.isConnected()) {
             ToastUtil.showShort(context, "网络不可用");
             Intent noNet = new Intent("offline");
@@ -48,13 +35,9 @@ public class MQTTMessageReveiver extends BroadcastReceiver {
             context.sendBroadcast(noNet);
             //改变背景或者 处理网络的全局变量
         } else if (mobNetInfo.isConnected() || wifiNetInfo.isConnected()) {
-            Intent mqttIntent = new Intent(context, MQService.class);
-            mqttIntent.putExtra("reconnect", "reconnect");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(mqttIntent);
-            }else {
-                context.startService(mqttIntent);
-            }
+//            Intent mqttIntent = new Intent(context, MQService.class);
+//            mqttIntent.putExtra("reconnect", "reconnect");
+//            context.startService(mqttIntent);
         }
     }
 

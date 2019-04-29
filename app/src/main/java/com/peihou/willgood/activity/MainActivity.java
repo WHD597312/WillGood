@@ -441,12 +441,12 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
     @Override
     protected void onStart() {
         super.onStart();
-        boolean running2 = ServiceUtils.isServiceRunning(this, "com.peihou.willgood.service.MQService");
-        if (!running2) {
-            Intent intent = new Intent(this, MQService.class);
-            intent.putExtra("restart", 1);
-            startService(intent);
-        }
+//        boolean running2 = ServiceUtils.isServiceRunning(this, "com.peihou.willgood.service.MQService");
+//        if (!running2) {
+//            Intent intent = new Intent(this, MQService.class);
+//            intent.putExtra("restart", 1);
+//            startService(intent);
+//        }
         device = deviceDao.findDeviceByType(1);
         device2 = deviceDao.findDeviceByType(2);
         if (device != null && device2 != null) {
@@ -596,6 +596,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                     Intent intent2 = new Intent(this, PowerLostMomoryActivity.class);
                     intent2.putExtra("plMemory", device.getPlMemory());
                     intent2.putExtra("deviceMac", device.getDeviceOnlyMac());
+                    intent2.putExtra("device",device);
                     intent2.putExtra("type", 1);
 
                     startActivityForResult(intent2, 1000);
@@ -629,7 +630,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                         device.setPrelineswitch(preLineSwitch);
                         device.setPrelinesjog(0);
                         device.setLastlinesjog(0);
-                        mqService.sendBasic(topicName, device);
+                        mqService.sendBasic(topicName, device,0x01);
                         click = 1;
                         countTimer.start();
                     } else {
@@ -642,7 +643,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                         device.setPrelineswitch(preLineSwitch);
                         device.setPrelinesjog(0);
                         device.setLastlinesjog(0);
-                        mqService.sendBasic(topicName, device);
+                        mqService.sendBasic(topicName, device,0x01);
                         click = 1;
                         countTimer.start();
                     }
@@ -686,7 +687,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                     }
                     if (isOpen2) {
                         int[] preLines = TenTwoUtil.changeToTwo(device2.getPrelinesjog());
-                        preLines[0] = 0;
+                        preLines[0] = 1;
                         onSwitch2 = 1;
                         int preLineSwitch = TenTwoUtil.changeToTen2(preLines);
                         device2.setPrelinesjog(preLineSwitch);
@@ -699,7 +700,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                     }
                     if (mqService != null) {
                         String topicName = "qjjc/gateway/" + device2.getDeviceOnlyMac() + "/server_to_client";
-                        mqService.sendBasic(topicName, device2);
+                        mqService.sendBasic(topicName, device2,0x02);
                         click2 = 1;
                         countTimer.start();
                     }
@@ -715,6 +716,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                     intent2.putExtra("plMemory", device2.getPlMemory());
                     intent2.putExtra("deviceMac", device2.getDeviceOnlyMac());
                     intent2.putExtra("type", 2);
+                    intent2.putExtra("device",device2);
                     startActivityForResult(intent2, 1001);
                 } else
                     ToastUtil.show(this, "请添加控制系统设备", 0);

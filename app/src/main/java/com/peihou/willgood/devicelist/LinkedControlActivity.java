@@ -126,14 +126,8 @@ public class LinkedControlActivity extends BaseActivity {
     protected void onStart() {
         super.onStart();
         running = true;
-
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
         if (mqService!=null){
-            mqService.connectMqtt(deviceMac);
+//            mqService.connectMqtt(deviceMac);
             list.clear();
             List<LinkedType> list2 = deviceLinkedTypeDao.findLinkdType(deviceMac);
             list.addAll(list2);
@@ -141,6 +135,13 @@ public class LinkedControlActivity extends BaseActivity {
             mqService.getData(topicName, 0x33);
             countTimer.start();
         }
+
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
 
     }
 

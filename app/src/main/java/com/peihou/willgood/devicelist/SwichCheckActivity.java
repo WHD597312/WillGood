@@ -310,15 +310,16 @@ public class SwichCheckActivity extends BaseActivity {
     protected void onStart() {
         super.onStart();
         running=true;
+        if (mqService != null) {
+//            mqService.connectMqtt(deviceMac);
+            mqService.getData(topicName, 0x55);
+        }
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (mqService != null) {
-            mqService.connectMqtt(deviceMac);
-            mqService.getData(topicName, 0x55);
-        }
     }
 
     @Override

@@ -56,6 +56,10 @@ android {
                 JPUSH_CHANNEL: "developer-default",
         ]
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
     buildTypes {
         release {
             minifyEnabled false
@@ -96,5 +100,7 @@ dependencies {
     implementation 'me.jessyan:autosize:1.1.2'
     implementation 'cn.jiguang.sdk:jpush:3.1.6'
     implementation 'cn.jiguang.sdk:jcore:1.2.5'
+    implementation project(':DaemonService2')
+
 
 }

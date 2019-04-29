@@ -17,6 +17,7 @@ import android.view.Window;
 import android.view.WindowManager;
 
 
+import com.peihou.willgood.daemon.DaemonHolder;
 import com.peihou.willgood.service.MQService;
 import com.peihou.willgood.service.ServiceUtils;
 import com.peihou.willgood.util.LogUtil;
@@ -70,17 +71,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        boolean running2= ServiceUtils.isServiceRunning(this,"com.peihou.willgood.service.MQService");
-        Log.i("ServiceUtils","-->"+running2);
-        if (!running2){
-            Intent intent=new Intent(this, MQService.class);
-            intent.putExtra("restart",1);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent);
-            }else {
-                startService(intent);
-            }
-        }
+        DaemonHolder.startService();
     }
 
 
