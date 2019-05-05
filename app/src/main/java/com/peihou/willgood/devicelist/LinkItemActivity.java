@@ -70,7 +70,7 @@ public class LinkItemActivity extends BaseActivity {
         deviceMac = parms.getString("deviceMac");
         deviceId = parms.getLong("deviceId");
         analog = parms.getInt("analog");
-        online=parms.getBoolean("online");
+        online = parms.getBoolean("online");
         parms.getInt("voice");
         if (type == 0) {
             name = "温度";
@@ -100,23 +100,14 @@ public class LinkItemActivity extends BaseActivity {
                     intent.putExtra("deviceId", deviceId);
                     startActivityForResult(intent, 1000);
                 } else {
-                    if (type==0){
-                        Intent intent = new Intent(LinkItemActivity.this, TempLinkedSetActivity.class);
-                        intent.putExtra("type", type);
-                        intent.putExtra("deviceMac", deviceMac);
-                        intent.putExtra("deviceId", deviceId);
-                        startActivityForResult(intent, 1001);
-                    }else {
-                        Intent intent = new Intent(LinkItemActivity.this, LinkedSetActivity.class);
-                        intent.putExtra("type", type);
-                        intent.putExtra("deviceMac", deviceMac);
-                        intent.putExtra("deviceId", deviceId);
-                        if (type == 5) {
-                            intent.putExtra("analog", analog);
-                        }
-                        startActivityForResult(intent, 1001);
-
+                    Intent intent = new Intent(LinkItemActivity.this, LinkedSetActivity.class);
+                    intent.putExtra("type", type);
+                    intent.putExtra("deviceMac", deviceMac);
+                    intent.putExtra("deviceId", deviceId);
+                    if (type == 5) {
+                        intent.putExtra("analog", analog);
                     }
+                    startActivityForResult(intent, 1001);
                 }
                 break;
         }
@@ -134,13 +125,13 @@ public class LinkItemActivity extends BaseActivity {
     public void initView(View view) {
 
         tv_title.setText(name + "联动");
-        topicName="qjjc/gateway/"+deviceMac+"/server_to_client";
+        topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
 //        topicName = "qjjc/gateway/" + deviceMac + "/client_to_server";
-            deviceLinkDao = new DeviceLinkDaoImpl(getApplicationContext());
+        deviceLinkDao = new DeviceLinkDaoImpl(getApplicationContext());
 //            list = deviceLinkDao.findLinkeds(deviceMac, type);
-            adapter = new MyAdapter(this, list);
-            list_linked.setLayoutManager(new LinearLayoutManager(this));
-            list_linked.setAdapter(adapter);
+        adapter = new MyAdapter(this, list);
+        list_linked.setLayoutManager(new LinearLayoutManager(this));
+        list_linked.setAdapter(adapter);
 
         Intent service = new Intent(this, MQService.class);
         bind = bindService(service, connection, Context.BIND_AUTO_CREATE);
@@ -157,7 +148,7 @@ public class LinkItemActivity extends BaseActivity {
     protected void onStart() {
         super.onStart();
         running = true;
-        if (mqService != null && returnData==0) {
+        if (mqService != null && returnData == 0) {
 //            mqService.connectMqtt(deviceMac);
             list.clear();
             adapter.notifyDataSetChanged();
@@ -177,7 +168,7 @@ public class LinkItemActivity extends BaseActivity {
             }
             mqService.getData(topicName, funCode);
             countTimer.start();
-            returnData=0;
+            returnData = 0;
         }
 
     }
@@ -192,7 +183,7 @@ public class LinkItemActivity extends BaseActivity {
     protected void onStop() {
         super.onStop();
         running = false;
-        returnData=0;
+        returnData = 0;
     }
 
     @Override
@@ -201,14 +192,15 @@ public class LinkItemActivity extends BaseActivity {
         super.onBackPressed();
     }
 
-    private List<Linked> updateLinkeds(List<Linked> linkeds){
-        for (int i = 0; i <linkeds.size() ; i++) {
-            Linked linked=linkeds.get(i);
+    private List<Linked> updateLinkeds(List<Linked> linkeds) {
+        for (int i = 0; i < linkeds.size(); i++) {
+            Linked linked = linkeds.get(i);
             linked.setVisitity(0);
-            linkeds.set(i,linked);
+            linkeds.set(i, linked);
         }
         return linkeds;
     }
+
     MQService mqService;
     ServiceConnection connection = new ServiceConnection() {
         @Override
@@ -217,11 +209,11 @@ public class LinkItemActivity extends BaseActivity {
             mqService = binder.getService();
             if (mqService != null) {
 
-                    List<Linked> list=mqService.getLinkeds(deviceMac,type);
-                    if (!list.isEmpty()){
-                        List<Linked> linkeds=updateLinkeds(list);
-                        mqService.updateLinkeds(linkeds);
-                    }
+                List<Linked> list = mqService.getLinkeds(deviceMac, type);
+                if (!list.isEmpty()) {
+                    List<Linked> linkeds = updateLinkeds(list);
+                    mqService.updateLinkeds(linkeds);
+                }
 
                 int funCode = 0;
                 if (type == 0) {
@@ -256,34 +248,34 @@ public class LinkItemActivity extends BaseActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             try {
-                String action=intent.getAction();
-                if ("offline".equals(action)){
+                String action = intent.getAction();
+                if ("offline".equals(action)) {
                     String macAddress = intent.getStringExtra("macAddress");
                     if (intent.hasExtra("all") || macAddress.equals(deviceMac)) {
-                        online=false;
+                        online = false;
                     }
-                }else {
+                } else {
                     String macAddress = intent.getStringExtra("macAddress");
-                    if (macAddress.equals(deviceMac)){
-                        boolean online2=intent.getBooleanExtra("online",false);
-                        online=online2;
+                    if (macAddress.equals(deviceMac)) {
+                        boolean online2 = intent.getBooleanExtra("online", false);
+                        online = online2;
                     }
                     int linkType = intent.getIntExtra("linkType", -1);
                     if (macAddress.equals(deviceMac) && linkType == type) {
                         int operate = intent.getIntExtra("operate", 0);
-                        if (returnData==1){
+                        if (returnData == 1) {
                             if (operate == 1) {
-                                mqService.starSpeech(deviceMac,7);
+                                mqService.starSpeech(deviceMac, 7);
                             } else {
-                                mqService.starSpeech(deviceMac,3);
+                                mqService.starSpeech(deviceMac, 3);
                             }
-                            returnData=0;
+                            returnData = 0;
                         }
-                            List<Linked> linkeds = mqService.getLinkeds(deviceMac, linkType);
-                            list.clear();
-                            list.addAll(linkeds);
-                            adapter.notifyDataSetChanged();
-                        }
+                        List<Linked> linkeds = mqService.getLinkeds(deviceMac, linkType);
+                        list.clear();
+                        list.addAll(linkeds);
+                        adapter.notifyDataSetChanged();
+                    }
 
 
                 }
@@ -296,7 +288,7 @@ public class LinkItemActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (popupWindow2!=null && popupWindow2.isShowing()){
+        if (popupWindow2 != null && popupWindow2.isShowing()) {
             popupWindow2.dismiss();
         }
 
@@ -329,14 +321,14 @@ public class LinkItemActivity extends BaseActivity {
         dialog.setOnPositiveClickListener(new ChangeDialog.OnPositiveClickListener() {
             @Override
             public void onPositiveClick() {
-                    Linked linked = list.get(postion);
-                    linked.setState(2);
+                Linked linked = list.get(postion);
+                linked.setState(2);
 
-                    if (mqService != null) {
-                        dialog.dismiss();
-                        boolean success = mqService.sendLinkedSet(topicName, linked,0x02);
-                        returnData = 1;
-                    }
+                if (mqService != null) {
+                    dialog.dismiss();
+                    boolean success = mqService.sendLinkedSet(topicName, linked, 0x02);
+                    returnData = 1;
+                }
 
 
             }
@@ -385,14 +377,14 @@ public class LinkItemActivity extends BaseActivity {
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, final int position) {
             final Linked linked = list.get(position);
             final int state = linked.getState();
-            String name="";
-            if (type==2){
+            String name = "";
+            if (type == 2) {
                 name = linked.getName();
-            }else {
-                name = linked.getName()+"("+(position+1)+")";
+            } else {
+                name = linked.getName() + "(" + (position + 1) + ")";
             }
             String lines = linked.getLines();
-            int condition = linked.getCondition();
+            double condition = linked.getCondition();
             int triType = linked.getTriType();
             int triState = linked.getTriState();
             int conditionState = linked.getConditionState();
@@ -408,7 +400,7 @@ public class LinkItemActivity extends BaseActivity {
             } else {
                 tv_lines.setText("");
             }
-            String ss="";
+            String ss = "";
             if (type == 2) {
                 if (condition == 1) {
                     c = "开关量断开";
@@ -421,30 +413,32 @@ public class LinkItemActivity extends BaseActivity {
                     c = c + "  关闭";
                 }
 
-                if (triType==1){
-                    ss=" 单次";
-                }else if (triType==0){
-                    ss=" 循环";
+                if (triType == 1) {
+                    ss = " 单次";
+                } else if (triType == 0) {
+                    ss = " 循环";
                 }
-                c=c+ss;
+                c = c + ss;
 
             } else {
+                String condition2 = "";
+                condition2 = String.format("%.1f", condition);
                 if (triState == 1) {
-                    c = "高于" + "  " + condition;
+                    c = "高于" + "  " + condition2;
                 } else {
-                    c = "低于" + "  " + condition;
+                    c = "低于" + "  " + condition2;
                 }
                 if (conditionState == 1) {
                     c = c + "  开启";
                 } else {
                     c = c + "  关闭";
                 }
-                if (triType==1){
-                    ss=" 单次";
-                }else if (triType==0){
-                    ss=" 循环";
+                if (triType == 1) {
+                    ss = " 单次";
+                } else if (triType == 0) {
+                    ss = " 循环";
                 }
-                c=c+ss;
+                c = c + ss;
             }
 
 
@@ -460,10 +454,10 @@ public class LinkItemActivity extends BaseActivity {
             img_open.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (!online){
-                        mqService.getData(topicName,0x11);
+                    if (!online) {
+                        mqService.getData(topicName, 0x11);
 
-                        ToastUtil.showShort(LinkItemActivity.this,"设备已离线");
+                        ToastUtil.showShort(LinkItemActivity.this, "设备已离线");
                         return;
                     }
 
@@ -473,7 +467,7 @@ public class LinkItemActivity extends BaseActivity {
                         linked.setState(1);
                     }
                     if (mqService != null) {
-                        boolean success = mqService.sendLinkedSet(topicName, linked,0x02);
+                        boolean success = mqService.sendLinkedSet(topicName, linked, 0x02);
                         returnData = 1;
                         countTimer.start();
                     }
@@ -496,38 +490,37 @@ public class LinkItemActivity extends BaseActivity {
     }
 
 
-
     int returnData = 0;
     int add = 0;
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
-            if (resultCode == 1000) {
-                int funCode = 0;
-                if (type == 0) {
-                    funCode = 0x34;
-                } else if (type == 1) {
-                    funCode = 0x35;
-                } else if (type == 2) {
-                    funCode = 0x36;
-                } else if (type == 3) {
-                    funCode = 0x37;
-                } else if (type == 4) {
-                    funCode = 0x38;
-                }
-                returnData = 1;
-//                mqService.getData(topicName, funCode);
-                Linked linked = (Linked) data.getSerializableExtra("linked");
-                if (linked != null && mqService!=null) {
-                    Log.i("topicName","-->"+topicName);
-                    mqService.sendLinkedSet(topicName, linked,0x01);
-                    add = 1;
-                    countTimer.start();
-                }
-            }else if (resultCode==1002){
-                returnData=2;
+        if (resultCode == 1000) {
+            int funCode = 0;
+            if (type == 0) {
+                funCode = 0x34;
+            } else if (type == 1) {
+                funCode = 0x35;
+            } else if (type == 2) {
+                funCode = 0x36;
+            } else if (type == 3) {
+                funCode = 0x37;
+            } else if (type == 4) {
+                funCode = 0x38;
             }
+            returnData = 1;
+//                mqService.getData(topicName, funCode);
+            Linked linked = (Linked) data.getSerializableExtra("linked");
+            if (linked != null && mqService != null) {
+                Log.i("topicName", "-->" + topicName);
+                mqService.sendLinkedSet(topicName, linked, 0x01);
+                add = 1;
+                countTimer.start();
+            }
+        } else if (resultCode == 1002) {
+            returnData = 2;
+        }
 
     }
 
@@ -576,7 +569,7 @@ public class LinkItemActivity extends BaseActivity {
         TextView tv_load = view.findViewById(R.id.tv_load);
         tv_load.setTextColor(getResources().getColor(R.color.white));
 
-            popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
         //添加弹出、弹入的动画
         popupWindow2.setAnimationStyle(R.style.Popupwindow);
         popupWindow2.setFocusable(false);

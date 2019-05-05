@@ -108,6 +108,8 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
     @BindView(R.id.img_refresh2)
     ImageView imgRefresh2;
 
+    @BindView(R.id.tv_tem2) TextView tv_tem2;
+    @BindView(R.id.tv_hum2) TextView tv_hum2;
 
     boolean isOpen1 = false, isOpen2 = false;
     @BindView(R.id.img_switch1)
@@ -302,12 +304,12 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                     imgSwitch1.setImageResource(R.mipmap.ic_main_open2);
                     tvSwitch1.setTextColor(this.getResources().getColor(R.color.main_gray));
                 }
-//                double temp = device.getTemp();
-//                double hum = device.getHum();
-//                String s = "" + String.format("%.1f", temp);
-//                String s2 = "" + String.format("%.1f", hum);
-//                tvTem.setText(s);
-//                tvHum.setText(s2);
+                double temp = device.getTemp();
+                double hum = device.getHum();
+                String s = "" + String.format("%.1f", temp);
+                String s2 = "" + String.format("%.1f", hum);
+                tv_tem2.setText(s);
+                tv_hum2.setText(s2);
             } else {
                 imgSwitch1.setImageResource(R.mipmap.ic_main_open2);
                 llSwitch1.setBackgroundResource(R.mipmap.bg_main_switch2);
@@ -455,15 +457,12 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
             UtilsJPush.resumeJpush(this);
         }
         if (device != null) {
-            device.setOnline(false);
-            deviceDao.update(device);
             setMode(1);
         }else {
             setMode2(1);
         }
         if (device2 != null) {
-            device2.setOnline(false);
-            deviceDao.update(device2);
+//            deviceDao.update(device2);
             setMode(2);
         }else {
             setMode2(2);
@@ -471,11 +470,11 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
         if (mqService != null) {
             if (device != null) {
                 String deviceMac = device.getDeviceOnlyMac();
-                mqService.connectMqtt(deviceMac);
+//                mqService.connectMqtt(deviceMac);
             }
             if (device2 != null) {
                 String deviceMac = device2.getDeviceOnlyMac();
-                mqService.connectMqtt(deviceMac);
+//                mqService.connectMqtt(deviceMac);
             }
         }
         running = true;

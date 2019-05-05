@@ -1025,7 +1025,9 @@ public class MQService extends AbsHeartBeatService {
                         int type = 4 - (0x38 - funCode);
                         linkType = type;
 
-                        int condition = data[4];//触发条件
+                        double condition = 0;//触发条件
+                        int lowCondition=data[4];
+                        int highCondition=data[11];
                         int conditionState = 0;
                         int preLines = data[5];//前8路
                         int lastLines = data[6];//后8路
@@ -1047,17 +1049,22 @@ public class MQService extends AbsHeartBeatService {
                             ss = "温度";
                             if (type == 0) {
                                 Log.i("condition", "-->" + condition);
-                                condition = condition - 128;
+//                                condition = condition - 128;
+                                condition=(highCondition*256+lowCondition)/10.0-128;
                             }
                         } else if (funCode == 0x35) {
                             ss = "湿度";
+                            condition=(highCondition*256+lowCondition)/10.0;
                         } else if (funCode == 0x36) {
                             ss = "开关量";
+                            condition=lowCondition;
                             switchLine = data[9];
                         } else if (funCode == 0x37) {
                             ss = "电流";
+                            condition=(highCondition*256+lowCondition)/10.0;
                         } else if (funCode == 0x38) {
                             ss = "电压";
+                            condition=(highCondition*256+lowCondition)/10.0;
                         }
                         if (x0 == 1 && x1 == 1) {
                             triState = 1;
@@ -1514,7 +1521,7 @@ public class MQService extends AbsHeartBeatService {
                         int type = data[4];
                         int tempHigh = data[5];
                         int tempLow = data[6];
-                        double temp = (1.0 * tempHigh * 256 + tempLow) / 10 - 50;
+                        double temp = (1.0 * tempHigh * 256 + tempLow) / 10 - 128;
                         int tempState = data[7];
                         int humHigh = data[8];
                         int humLow = data[9];
@@ -1528,9 +1535,12 @@ public class MQService extends AbsHeartBeatService {
                         int currentLow = data[15];
                         double current = (1.0 * currentHigh * 256 + currentLow) / 10;
                         int currentState = data[16];
-                        int powerHigh = data[17];
-                        int powerLow = data[18];
-                        double power = (1.0 * powerHigh * 256 + powerLow) / 10;
+                        String powerMiddle=Integer.toHexString(data[17]);
+                        String powerLow = Integer.toHexString(data[18]);
+                        String powerHigh =Integer.toHexString(data[21]);
+                        String powerS =powerHigh+powerMiddle+powerLow;
+                        int powerI=Integer.parseInt(powerS,16);
+                        double power=powerI/10.0;
                         int powerState = data[19];
                         int switchState = data[20];
                         int[] x = TenTwoUtil.changeToTwo(type);
@@ -2182,7 +2192,7 @@ public class MQService extends AbsHeartBeatService {
         }
     }
 
-    int[] alermData = new int[17];
+    int[] alermData = new int[18];
 
     public int[] getAlermData() {
         return alermData;
@@ -2683,8 +2693,10 @@ public class MQService extends AbsHeartBeatService {
     public boolean sendLinkedSet(String topicName, Linked linked, int operate) {
         boolean success = false;
         try {
-            int type = linked.getType();
+            int type = linked.getType();//0 温度 1湿度 2开关量联动 3电流 4电压 5模拟量联动
             int funCode = 0;
+            int lowCondition=0;
+            int highCondition=0;
             if (type == 0) {
                 funCode = 0x34;
             } else if (type == 1) {
@@ -2697,9 +2709,25 @@ public class MQService extends AbsHeartBeatService {
                 funCode = 0x38;
             }
             int mcuVersion = linked.getMcuVersion();
-            int condition = linked.getCondition();//触发条件
+            double condition = linked.getCondition();//触发条件
             if (type == 0) {
-                condition = condition + 128;
+                condition = (condition + 128)*10;
+                highCondition=(int)(condition/256);
+                lowCondition=(int) (condition%256);
+            }else if (type==1){
+                condition=condition*10;
+                highCondition=(int) (condition/256);
+                lowCondition=(int) (condition%256);
+            }else if (type==2){
+                lowCondition=(int) condition;
+            }else if (type==3){
+                condition=condition*10;
+                highCondition=(int) (condition/256);
+                lowCondition=(int) (condition%256);
+            }else if (type==4){
+                condition=condition*10;
+                highCondition=(int) (condition/256);
+                lowCondition=(int) (condition%256);
             }
             int triState = linked.getTriState();//触发条件状态
             int conditionState = linked.getConditionState();//控制状态
@@ -2736,7 +2764,7 @@ public class MQService extends AbsHeartBeatService {
             bytes[1] = (byte) funCode;
             bytes[2] = (byte) mcuVersion;
             bytes[3] = 0x0a;
-            bytes[4] = (byte) condition;
+            bytes[4] = (byte) lowCondition;
             bytes[5] = (byte) preLines;
             bytes[6] = (byte) lastLines;
             bytes[7] = (byte) triType2;
@@ -2745,7 +2773,7 @@ public class MQService extends AbsHeartBeatService {
                 bytes[9] = (byte) switchLine;
             }
             bytes[10] = (byte) operate;
-
+            bytes[11]= (byte) highCondition;
             int sum = 0;
             for (int i = 0; i < bytes.length; i++) {
                 sum += bytes[i];
@@ -3073,7 +3101,7 @@ public class MQService extends AbsHeartBeatService {
                 }
 
                 NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(),PUSH_CHANNEL_ID);
-                builder.setSmallIcon(R.mipmap.logo)
+                builder.setSmallIcon(R.mipmap.logo2)
                         .setContentTitle("LED云管家")
                         .setContentText("你有一条报警信息,请及时处理")
                         .setDefaults(Notification.DEFAULT_ALL)
