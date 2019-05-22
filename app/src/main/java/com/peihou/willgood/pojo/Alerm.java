@@ -48,6 +48,16 @@ public class Alerm implements Serializable {
         this.deviceMac=deviceMac;
         this.value=value;
     }
+    public Alerm(String name, int type,String content, boolean open,long deviceId,String deviceMac,double value) {
+        this.name = name;
+        this.type = type;
+        this.content=content;
+        this.open = open;
+        this.deviceId=deviceId;
+        this.deviceMac=deviceMac;
+        this.value=value;
+    }
+
     public Alerm(String name, int type, boolean open,String deviceMac) {
         this.name = name;
         this.type = type;

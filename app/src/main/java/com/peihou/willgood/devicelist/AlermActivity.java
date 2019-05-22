@@ -31,6 +31,7 @@ import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.custom.AlermDialog;
 import com.peihou.willgood.custom.AlermDialog2;
 import com.peihou.willgood.custom.AlermDialog3;
+import com.peihou.willgood.custom.DialogLoad;
 import com.peihou.willgood.database.dao.impl.DeviceAlermDaoImpl;
 import com.peihou.willgood.pojo.Alerm;
 import com.peihou.willgood.service.MQService;
@@ -111,7 +112,7 @@ public class AlermActivity extends BaseActivity {
             list2.add(new Alerm("电压报警", 4, "电压报警,请注意", false, deviceMac, 0));
             list2.add(new Alerm("电流报警", 5, "电流报警,请注意", false, deviceMac, 0));
             list2.add(new Alerm("功率报警", 6, "功率报警,请注意", false, deviceMac, 0));
-            list2.add(new Alerm("开关量报警", 7, "开关量报警,请注意", false, deviceMac, 50));
+            list2.add(new Alerm("开关量报警", 7, "开关量报警,请注意", false, deviceMac, 0));
             deviceAlermDao.insertDeviceAlerms(list2);
             list.addAll(list2);
         }
@@ -176,44 +177,55 @@ public class AlermActivity extends BaseActivity {
 
         @Override
         public void onTick(long millisUntilFinished) {
-            popupmenuWindow3();
+            setLoadDialog();
         }
 
         @Override
         public void onFinish() {
-            if (popupWindow2 != null && popupWindow2.isShowing()) {
-                popupWindow2.dismiss();
+            if (dialogLoad != null && dialogLoad.isShowing()) {
+                dialogLoad.dismiss();
             }
         }
     }
-    private PopupWindow popupWindow2;
-
-    public void popupmenuWindow3() {
-        if (popupWindow2 != null && popupWindow2.isShowing()) {
+    DialogLoad dialogLoad;
+    private void setLoadDialog() {
+        if (dialogLoad != null && dialogLoad.isShowing()) {
             return;
         }
-        View view = View.inflate(this, R.layout.progress, null);
-        TextView tv_load = view.findViewById(R.id.tv_load);
-        tv_load.setTextColor(getResources().getColor(R.color.white));
 
-            popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
-        //添加弹出、弹入的动画
-        popupWindow2.setAnimationStyle(R.style.Popupwindow);
-        popupWindow2.setFocusable(false);
-        popupWindow2.setOutsideTouchable(false);
-        backgroundAlpha(0.6f);
-        popupWindow2.setOnDismissListener(new PopupWindow.OnDismissListener() {
-            @Override
-            public void onDismiss() {
-                backgroundAlpha(1.0f);
-            }
-        });
-//        ColorDrawable dw = new ColorDrawable(0x30000000);
-//        popupWindow.setBackgroundDrawable(dw);
-//        popupWindow2.showAsDropDown(et_wifi, 0, -20);
-        popupWindow2.showAtLocation(list_alerm, Gravity.CENTER, 0, 0);
-        //添加按键事件监听
+        dialogLoad = new DialogLoad(this);
+        dialogLoad.setCanceledOnTouchOutside(false);
+        dialogLoad.setLoad("正在加载,请稍后");
+        dialogLoad.show();
     }
+//    private PopupWindow popupWindow2;
+
+//    public void popupmenuWindow3() {
+//        if (popupWindow2 != null && popupWindow2.isShowing()) {
+//            return;
+//        }
+//        View view = View.inflate(this, R.layout.progress, null);
+//        TextView tv_load = view.findViewById(R.id.tv_load);
+//        tv_load.setTextColor(getResources().getColor(R.color.white));
+//
+//            popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+//        //添加弹出、弹入的动画
+//        popupWindow2.setAnimationStyle(R.style.Popupwindow);
+//        popupWindow2.setFocusable(false);
+//        popupWindow2.setOutsideTouchable(false);
+//        backgroundAlpha(0.6f);
+//        popupWindow2.setOnDismissListener(new PopupWindow.OnDismissListener() {
+//            @Override
+//            public void onDismiss() {
+//                backgroundAlpha(1.0f);
+//            }
+//        });
+////        ColorDrawable dw = new ColorDrawable(0x30000000);
+////        popupWindow.setBackgroundDrawable(dw);
+////        popupWindow2.showAsDropDown(et_wifi, 0, -20);
+//        popupWindow2.showAtLocation(list_alerm, Gravity.CENTER, 0, 0);
+//        //添加按键事件监听
+//    }
 
 //    class UpdateAlermAeync extends AsyncTask<Map<String, Object>, Void, Integer> {
 //
@@ -309,8 +321,8 @@ public class AlermActivity extends BaseActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (popupWindow2!=null && popupWindow2.isShowing()){
-            popupWindow2.dismiss();
+        if (dialogLoad!=null && dialogLoad.isShowing()){
+            dialogLoad.dismiss();
         }
 
         if (bind) {
@@ -703,9 +715,19 @@ public class AlermActivity extends BaseActivity {
 
                 try {
                     double s = Double.parseDouble(value);
+                    String ss=Math.abs(s)+"";
+                    if (ss.contains(".")){
+                        ss=ss.substring(ss.indexOf(".")+1);
+                    }else {
+                        ss="";
+                    }
+                    if (ss.length()>1){
+                        ToastUtil.showShort(AlermActivity.this, "报警数值精确到小数后1位");
+                        return;
+                    }
                     if (type == 0) {
                         if (s >= -128.0 && s <= 512.9) {
-                            s += 50;
+                            s += 128;
                             BigDecimal b = new BigDecimal(s);
                             s = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
                             int alermValue = (int)( s * 10);
@@ -794,22 +816,23 @@ public class AlermActivity extends BaseActivity {
                             s = b.setScale(1, BigDecimal.ROUND_HALF_DOWN).doubleValue();
                             int rangeValue=(int)( s*10);
                             String range=Integer.toHexString(rangeValue);
+                            if (range.length()==1){
+                                range="00000"+range;
+                            }else if (range.length()==2){
+                                range="0000"+range;
+                            }else if (range.length()==3){
+                                range="000"+range;
+                            }else if (range.length()==4){
+                                range="00"+range;
+                            }else if (range.length()==5) {
+                                range="0"+range;
+                            }
                             int middlePower=0;
                             int lowPower=0;
                             int highPower=0;
-                            int size=range.length();
-                            if (size<=2){
-                                lowPower=Integer.parseInt(range,16);
-                            }
-                            else if (size>2 && size<=4){
-                                lowPower=Integer.parseInt(range.substring(2),16);
-                                middlePower=Integer.parseInt(range.substring(0,2),16);
-                            }
-                            else if (size>4 && size<=6){
-                                highPower=Integer.parseInt(range.substring(0,2),16);
-                                middlePower=Integer.parseInt(range.substring(2,4),16);
-                                lowPower=Integer.parseInt(range.substring(4),16);
-                            }
+                            highPower=Integer.parseInt(range.substring(0,2),16);
+                            middlePower=Integer.parseInt(range.substring(2,4),16);
+                            lowPower=Integer.parseInt(range.substring(4),16);
 
                             int data []=mqService.getAlermData();
                             data[13] =middlePower;
@@ -823,7 +846,6 @@ public class AlermActivity extends BaseActivity {
                             mqService.sendAlerm(topicName, mcuVersion, data);
                             click=1;
                             countTimer.start();
-
 
                         } else {
                             ToastUtil.showShort(AlermActivity.this, "不在该报警范围之内!");

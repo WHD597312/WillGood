@@ -15,9 +15,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -34,6 +36,7 @@ import com.peihou.willgood.R;
 import com.peihou.willgood.base.BaseActivity;
 import com.peihou.willgood.base.MyApplication;
 import com.peihou.willgood.custom.ChangeDialog;
+import com.peihou.willgood.custom.DialogLoad;
 import com.peihou.willgood.custom.ExitLoginDialog;
 import com.peihou.willgood.database.dao.impl.DeviceDaoImpl;
 import com.peihou.willgood.devicelist.AlermActivity;
@@ -180,6 +183,23 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
 
     }
 
+    int preKey=0;
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (event.getKeyCode()==KeyEvent.KEYCODE_HOME || event.getKeyCode()==KeyEvent.KEYCODE_BACK){
+            preKey=1;
+            if (device!=null){
+                device.setOnline(false);
+                deviceDao.update(device);
+            }
+            if (device2!=null){
+                device2.setOnline(false);
+                deviceDao.update(device2);
+            }
+        }
+        return super.onKeyDown(keyCode,event);
+    }
+
     @Override
     public void doBusiness(Context mContext) {
 
@@ -211,11 +231,12 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                 if (mqService != null) {
 //                    mqService.clearAllData();
                     mqService.cancelAllsubscibe();
+
 //                    mqService.clearCountTimer();
                 }
 
-                if (popupWindow2 != null && popupWindow2.isShowing()) {
-                    popupWindow2.dismiss();
+                if (dialogLoad != null && dialogLoad.isShowing()) {
+                    dialogLoad.dismiss();
                 }
                 setExitLoginPage();
             }
@@ -249,7 +270,14 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                 Log.i("Activity22222", "-->MainActivity");
             }
         }
-
+        if (device!=null){
+            device.setOnline(false);
+            deviceDao.update(device);
+        }
+        if (device2!=null){
+            device2.setOnline(false);
+            deviceDao.update(device2);
+        }
         application.removeActiviies(list);
         Intent intent = new Intent(MainActivity.this, LoginActivity.class);
         intent.putExtra("exit", 1);
@@ -388,13 +416,13 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
 
         @Override
         public void onTick(long millisUntilFinished) {
-            popupmenuWindow3();
+            setLoadDialog();
         }
 
         @Override
         public void onFinish() {
-            if (popupWindow2 != null && popupWindow2.isShowing()) {
-                popupWindow2.dismiss();
+            if (dialogLoad != null && dialogLoad.isShowing()) {
+                dialogLoad.dismiss();
             }
         }
     }
@@ -405,41 +433,57 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
         getWindow().setAttributes(lp);
     }
 
-    private PopupWindow popupWindow2;
+//    private PopupWindow popupWindow2;
 
-    public void popupmenuWindow3() {
-        if (popupWindow2 != null && popupWindow2.isShowing()) {
+//    public void popupmenuWindow3() {
+//        if (popupWindow2 != null && popupWindow2.isShowing()) {
+//            return;
+//        }
+//        View view = View.inflate(this, R.layout.progress, null);
+//        TextView tv_load = view.findViewById(R.id.tv_load);
+//        if (refresh == 1) {
+//            tv_load.setText("数据查询中!");
+//        } else {
+//            tv_load.setText("加载中...");
+//        }
+////        tv_load.setTextColor(getResources().getColor(R.color.white));
+//
+//        popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+//        //添加弹出、弹入的动画
+//        popupWindow2.setAnimationStyle(R.style.Popupwindow);
+//        popupWindow2.setFocusable(false);
+//        popupWindow2.setOutsideTouchable(false);
+//        backgroundAlpha(0.5f);
+//        popupWindow2.setOnDismissListener(new PopupWindow.OnDismissListener() {
+//            @Override
+//            public void onDismiss() {
+//                backgroundAlpha(1.0f);
+//            }
+//        });
+////        ColorDrawable dw = new ColorDrawable(0x30000000);
+////        popupWindow.setBackgroundDrawable(dw);
+////        popupWindow2.showAsDropDown(et_wifi, 0, -20);
+//        popupWindow2.showAtLocation(tv1, Gravity.CENTER, 0, 0);
+//        //添加按键事件监听
+//
+//    }
+    DialogLoad dialogLoad;
+    private void setLoadDialog() {
+        if (dialogLoad != null && dialogLoad.isShowing()) {
             return;
         }
-        View view = View.inflate(this, R.layout.progress, null);
-        TextView tv_load = view.findViewById(R.id.tv_load);
+
+        dialogLoad = new DialogLoad(this);
+        dialogLoad.setCanceledOnTouchOutside(false);
+//        dialogLoad.setLoad("正在加载,请稍后");
         if (refresh == 1) {
-            tv_load.setText("数据查询中!");
+            dialogLoad.setLoad("数据查询中!");
         } else {
-            tv_load.setText("加载中...");
+            dialogLoad.setLoad("正在加载,请稍后");
         }
-//        tv_load.setTextColor(getResources().getColor(R.color.white));
-
-        popupWindow2 = new PopupWindow(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
-        //添加弹出、弹入的动画
-        popupWindow2.setAnimationStyle(R.style.Popupwindow);
-        popupWindow2.setFocusable(false);
-        popupWindow2.setOutsideTouchable(false);
-        backgroundAlpha(0.5f);
-        popupWindow2.setOnDismissListener(new PopupWindow.OnDismissListener() {
-            @Override
-            public void onDismiss() {
-                backgroundAlpha(1.0f);
-            }
-        });
-//        ColorDrawable dw = new ColorDrawable(0x30000000);
-//        popupWindow.setBackgroundDrawable(dw);
-//        popupWindow2.showAsDropDown(et_wifi, 0, -20);
-        popupWindow2.showAtLocation(tv1, Gravity.CENTER, 0, 0);
-        //添加按键事件监听
-
+        dialogLoad.show();
     }
-
+    private PowerManager pm;
     @Override
     protected void onStart() {
         super.onStart();
@@ -449,35 +493,51 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
 //            intent.putExtra("restart", 1);
 //            startService(intent);
 //        }
+        running = true;
         device = deviceDao.findDeviceByType(1);
         device2 = deviceDao.findDeviceByType(2);
+
         if (device != null && device2 != null) {
             UtilsJPush.stopJpush(this);
         } else {
             UtilsJPush.resumeJpush(this);
         }
-        if (device != null) {
+        if (device != null && preKey==0) {
             setMode(1);
-        }else {
+        }else if (device==null){
             setMode2(1);
         }
-        if (device2 != null) {
-//            deviceDao.update(device2);
+        if (device2 != null && preKey==0) {
             setMode(2);
-        }else {
+        }else if (device2==null){
             setMode2(2);
         }
-        if (mqService != null) {
+
+
+        if (mqService != null && preKey==1) {
             if (device != null) {
+                device.setOnline(false);
+                deviceDao.update(device);
+                setMode(1);
                 String deviceMac = device.getDeviceOnlyMac();
+                String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
+                mqService.getData(topicName,0x11);
+                countTimer.start();
 //                mqService.connectMqtt(deviceMac);
             }
             if (device2 != null) {
+                device2.setOnline(false);
+                deviceDao.update(device2);
+                setMode(2);
                 String deviceMac = device2.getDeviceOnlyMac();
+                String topicName = "qjjc/gateway/" + deviceMac + "/server_to_client";
+                mqService.getData(topicName,0x11);
+                countTimer.start();
 //                mqService.connectMqtt(deviceMac);
             }
         }
-        running = true;
+        preKey=0;
+
     }
 
 
@@ -606,7 +666,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
             case R.id.ll_switch1:
                 if (device != null) {
                     refresh = 0;
-                    if (popupWindow2 != null && popupWindow2.isShowing()) {
+                    if (dialogLoad != null && dialogLoad.isShowing()) {
                         ToastUtil.showShort(this, "请稍后...");
                         break;
                     }
@@ -651,7 +711,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                 break;
             case R.id.img_refresh1:
                 if (device != null) {
-                    if (popupWindow2 != null && popupWindow2.isShowing()) {
+                    if (dialogLoad != null && dialogLoad.isShowing()) {
                         ToastUtil.show(this, "请稍后...", 0);
                     } else {
 //                        imgRefresh1.startAnimation(rotateAnimation);
@@ -670,7 +730,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
             case R.id.ll_switch2:
                 if (device2 != null) {
                     refresh = 0;
-                    if (popupWindow2 != null && popupWindow2.isShowing()) {
+                    if (dialogLoad != null && dialogLoad.isShowing()) {
                         ToastUtil.showShort(this, "请稍后...");
                         break;
                     }
@@ -722,7 +782,7 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                 break;
             case R.id.img_refresh2:
                 if (device2 != null) {
-                    if (popupWindow2 != null && popupWindow2.isShowing()) {
+                    if (dialogLoad != null && dialogLoad.isShowing()) {
                         ToastUtil.show(this, "请稍后...", 0);
                         break;
                     } else {
@@ -835,8 +895,8 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                     }
                     onSwitch=-1;
                     onSwitch2=-1;
-                    if (popupWindow2 != null && popupWindow2.isShowing()) {
-                        popupWindow2.dismiss();
+                    if (dialogLoad != null && dialogLoad.isShowing()) {
+                        dialogLoad.dismiss();
                     }
                 } else {
                     String macAddress = intent.getStringExtra("macAddress");
@@ -859,8 +919,8 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                             mqService.starSpeech(macAddress, 1);
                             onSwitch = -1;
                         }
-                        if (popupWindow2 != null && popupWindow2.isShowing()) {
-                            popupWindow2.dismiss();
+                        if (dialogLoad != null && dialogLoad.isShowing()) {
+                            dialogLoad.dismiss();
                         }
                     } else if (device2 != null && macAddress.equals(device2.getDeviceOnlyMac())) {
 
@@ -878,8 +938,8 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
                             mqService.starSpeech(macAddress, 2);
                             onSwitch2 = -1;
                         }
-                        if (popupWindow2 != null && popupWindow2.isShowing()) {
-                            popupWindow2.dismiss();
+                        if (dialogLoad != null && dialogLoad.isShowing()) {
+                            dialogLoad.dismiss();
                         }
                     }
                 }
@@ -900,13 +960,18 @@ public class MainActivity extends BaseActivity implements CustomAdapt {
         running = false;
         click = 0;
         stop = 1;
+        pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        boolean isOpen = pm.isScreenOn();
+        if (!isOpen){
+            preKey=1;
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (popupWindow2 != null && popupWindow2.isShowing()) {
-            popupWindow2.dismiss();
+        if (dialogLoad != null && dialogLoad.isShowing()) {
+            dialogLoad.dismiss();
         }
 
         if (reveiver != null) {

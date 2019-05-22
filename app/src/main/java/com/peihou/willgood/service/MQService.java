@@ -138,7 +138,7 @@ public class MQService extends AbsHeartBeatService {
 //        mTts = SpeechSynthesizer.createSynthesizer(this,
 //                mTtsInitListener);
 
-        mediaPlayer = new MediaPlayer();
+//        mediaPlayer = new MediaPlayer();
         Log.i(TAG, "onCreate");
         clientId = UUID.getUUID(this);
         Log.i("clientId", "-->" + clientId);
@@ -146,21 +146,33 @@ public class MQService extends AbsHeartBeatService {
         reciiver = new SpeechReceiver();
         registerReceiver(reciiver, intentFilter);
         preferences = getSharedPreferences("my", Context.MODE_PRIVATE);
-        deviceDao = new DeviceDaoImpl(getApplicationContext());
+        new InitMQttAsync().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+
 //        List<Device> devices = deviceDao.findAllDevice();
 //        for (Device device : devices) {
 //            String deviceMac = device.getDeviceOnlyMac();
 //            addCountTimer(deviceMac);
 //        }
-        deviceAlermDao = new DeviceAlermDaoImpl(getApplicationContext());
-        deviceLineDao = new DeviceLineDaoImpl(getApplicationContext());
-        timerTaskDao = new TimerTaskDaoImpl(getApplicationContext());
-        deviceLinkedTypeDao = new DeviceLinkedTypeDaoImpl(getApplicationContext());
-        deviceLinkDao = new DeviceLinkDaoImpl(getApplicationContext());
-        preferences = getSharedPreferences("userInfo", Context.MODE_PRIVATE);
-        userId = preferences.getInt("userId", 0);
-        init();
+
     }
+    class InitMQttAsync extends AsyncTask<Void,Void,Void>{
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            deviceDao = new DeviceDaoImpl(getApplicationContext());
+
+            deviceAlermDao = new DeviceAlermDaoImpl(getApplicationContext());
+            deviceLineDao = new DeviceLineDaoImpl(getApplicationContext());
+            timerTaskDao = new TimerTaskDaoImpl(getApplicationContext());
+            deviceLinkedTypeDao = new DeviceLinkedTypeDaoImpl(getApplicationContext());
+            deviceLinkDao = new DeviceLinkDaoImpl(getApplicationContext());
+            preferences = getSharedPreferences("userInfo", Context.MODE_PRIVATE);
+            userId = preferences.getInt("userId", 0);
+            init();
+            return null;
+        }
+    }
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -231,13 +243,8 @@ public class MQService extends AbsHeartBeatService {
 
     public void connect(int state) {
         try {
-            if (client != null && client.isConnected() == false) {
-                client.connect(options);
-            }
-            if (state == 1) {
-                new ConAsync(MQService.this).execute();
-//                countTime2.start();
-            }
+
+            new ConAsync(MQService.this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -298,10 +305,9 @@ public class MQService extends AbsHeartBeatService {
         protected Integer doInBackground(MQService mqService, Void... voids) {
             int code=0;
             try {
-                if (client.isConnected() == false) {
+                if (client != null && client.isConnected() == false) {
                     client.connect(options);
-                }
-                List<String> topicNames = getTopicNames();
+                }                List<String> topicNames = getTopicNames();
                 Log.i("ConAsync", "-->" + topicNames.size());
                 if (client.isConnected() && !topicNames.isEmpty()) {
                     for (String topicName : topicNames) {
@@ -732,22 +738,19 @@ public class MQService extends AbsHeartBeatService {
                             int[] x5 = TenTwoUtil.changeToTwo(prelinesjog);
                             int[] x6 = TenTwoUtil.changeToTwo(lastlinesjog);
                             List<Line2> line2List = deviceLineDao.findDeviceLines(macAddress);
-                            if (line2List.isEmpty()) {
-                                List<Line2> list2 = deviceLineDao.findDeviceLines(macAddress);
-                                if ((list2 != null && list2.size() != 16)) {
-                                    deviceLineDao.deleteDeviceLines(list2);
-                                    for (int i = 1; i <= 16; i++) {
-                                        Line2 line21 = new Line2(false, i + "路", 0, false, i, macAddress);
-                                        line2List.add(line21);
-                                    }
-                                    deviceLineDao.insertDeviceLines(line2List);
+                            if ((line2List != null && line2List.size() != 16)) {
+                                deviceLineDao.deleteDeviceLines(macAddress);
+                                for (int i = 1; i <= 16; i++) {
+                                    Line2 line21 = new Line2(false, i + "路", 0, false, i, macAddress);
+                                    line2List.add(line21);
                                 }
+                                deviceLineDao.insertDeviceLines(line2List);
                             }
                             sb.setLength(0);
                             if (line2List != null && line2List.size() == 16) {
                                 for (int i = 0; i < 16; i++) {
                                     Line2 line21 = line2List.get(i);
-                                    String name = line21.getName();
+//                                    String name = line21.getName();
                                     int deviceLineNum = line21.getDeviceLineNum();
                                     if (i < 8) {
                                         if (x[i] == 1) {
@@ -774,9 +777,7 @@ public class MQService extends AbsHeartBeatService {
                                         if (x4[i - 8] == 1) {
                                             line21.setOpen(true);
                                         } else {
-                                            if (state == 0) {
-                                                line21.setOpen(false);
-                                            }
+                                            line21.setOpen(false);
                                         }
                                     }
                                     if (i < 8) {
@@ -1538,6 +1539,24 @@ public class MQService extends AbsHeartBeatService {
                         String powerMiddle=Integer.toHexString(data[17]);
                         String powerLow = Integer.toHexString(data[18]);
                         String powerHigh =Integer.toHexString(data[21]);
+                        if (powerHigh.length()==0){
+                            powerHigh="00";
+                        } else if (powerHigh.length()==1){
+                            powerHigh="0"+powerHigh;
+                        }
+
+
+                        if (powerMiddle.length()==0){
+                            powerMiddle="00";
+                        } else if (powerMiddle.length()==1){
+                            powerMiddle="0"+powerMiddle;
+                        }
+
+                        if (powerLow.length()==0){
+                            powerLow="00";
+                        } else if (powerLow.length()==1){
+                            powerLow="0"+powerLow;
+                        }
                         String powerS =powerHigh+powerMiddle+powerLow;
                         int powerI=Integer.parseInt(powerS,16);
                         double power=powerI/10.0;
@@ -1549,14 +1568,15 @@ public class MQService extends AbsHeartBeatService {
                         if (list.size() != 8) {
                             deviceAlermDao.deleteDeviceAlerms(macAddress);
                             Device device2 = deviceDao.findDeviceByMac(macAddress);
-                            list.add(new Alerm("来电报警", 0, "设备已来电!", false, macAddress, 0));
-                            list.add(new Alerm("断电报警", 1, "设备已断电,请及时处理", false, macAddress, 0));
-                            list.add(new Alerm("温度报警", 2, "温度报警,请注意", false, macAddress, 0));
-                            list.add(new Alerm("湿度报警", 3, "湿度报警,请注意", false, macAddress, 0));
-                            list.add(new Alerm("电压报警", 4, "电压报警,请注意", false,  macAddress, 0));
-                            list.add(new Alerm("电流报警", 5, "电流报警,请注意", false, macAddress, 0));
-                            list.add(new Alerm("功率报警", 6, "功率报警,请注意", false, macAddress, 0));
-                            list.add(new Alerm("开关量报警", 7, "开关量报警,请注意", false, macAddress, 50));
+                            long deviceId = device2.getDeviceId();
+                            list.add(new Alerm("来电报警", 0, "设备已来电!", false, deviceId, macAddress, 0));
+                            list.add(new Alerm("断电报警", 1, "设备已断电,请及时处理", false, deviceId, macAddress, 0));
+                            list.add(new Alerm("温度报警", 2, "温度报警,请注意", false, deviceId, macAddress, 0));
+                            list.add(new Alerm("湿度报警", 3, "湿度报警,请注意", false, deviceId, macAddress, 0));
+                            list.add(new Alerm("电压报警", 4, "电压报警,请注意", false, deviceId, macAddress, 0));
+                            list.add(new Alerm("电流报警", 5, "电流报警,请注意", false, deviceId, macAddress, 0));
+                            list.add(new Alerm("功率报警", 6, "功率报警,请注意", false, deviceId, macAddress, 0));
+                            list.add(new Alerm("开关量报警", 7, "开关量报警,请注意", false, deviceId, macAddress, 0));
                             deviceAlermDao.insertDeviceAlerms(list);
                         }
                         Alerm alerm = deviceAlermDao.findDeviceAlerm(macAddress, 0);//来电报警
@@ -1813,7 +1833,7 @@ public class MQService extends AbsHeartBeatService {
                         msg.arg1 = type;//报警类型
                         msg.arg2 = 1;//报警次数
                         msg.obj = cotent;
-                        handler.sendMessage(msg);
+                        handler.sendMessageDelayed(msg,500);
                     } else if (funCode == 0xaa) {
                         for (int j = 4; j < data.length - 2; j++) {
                             rs485 = rs485 + "" + data[j] + " ";
@@ -2105,6 +2125,19 @@ public class MQService extends AbsHeartBeatService {
      */
     public boolean publish(String topicName, int qos, byte[] bytes) {
         boolean flag = false;
+        try {
+            if (client!=null && !client.isConnected()){
+                client.connect(options);
+                String ss[]=topicName.split("/");
+                String mac = ss[2];
+                String server = "qjjc/gateway/" + mac + "/client_to_server";
+                String lwt = "qjjc/gateway/" + mac + "/lwt";
+                subscribe(server,1);
+                subscribe(lwt,1);
+            }
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
         if (client != null && client.isConnected()) {
             try {
                 MqttMessage message = new MqttMessage(bytes);
@@ -2291,20 +2324,20 @@ public class MQService extends AbsHeartBeatService {
             alermDialog4.setOnNegativeClickListener(new AlermDialog4.OnNegativeClickListener() {
                 @Override
                 public void onNegativeClick() {
-                    if (mediaPlayer != null) {
-                        mediaPlayer.setLooping(false);
-                        mediaPlayer.reset();
-                    }
+//                    if (mediaPlayer != null) {
+//                        mediaPlayer.setLooping(false);
+//                        mediaPlayer.reset();
+//                    }
                     alermDialog4.dismiss();
                 }
             });
             alermDialog4.setOnPositiveClickListener(new AlermDialog4.OnPositiveClickListener() {
                 @Override
                 public void onPositiveClick() {
-                    if (mediaPlayer != null) {
-                        mediaPlayer.setLooping(false);
-                        mediaPlayer.reset();
-                    }
+//                    if (mediaPlayer != null) {
+//                        mediaPlayer.setLooping(false);
+//                        mediaPlayer.reset();
+//                    }
                     alermDialog4.dismiss();
 
                 }
@@ -2314,11 +2347,15 @@ public class MQService extends AbsHeartBeatService {
                 alermDialog4.setOnDismissListener(new DialogInterface.OnDismissListener() {
                     @Override
                     public void onDismiss(DialogInterface dialog) {
-                        soundCount = 3;
                         if (mediaPlayer != null) {
                             mediaPlayer.setLooping(false);
-                            mediaPlayer.reset();
+                            if (mediaPlayer.isPlaying()){
+                                mediaPlayer.stop();
+                                mediaPlayer.release();
+//                                mediaPlayer=null;
+                            }
                         }
+
                     }
                 });
             }
@@ -3102,7 +3139,7 @@ public class MQService extends AbsHeartBeatService {
 
                 NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(),PUSH_CHANNEL_ID);
                 builder.setSmallIcon(R.mipmap.logo2)
-                        .setContentTitle("LED云管家")
+                        .setContentTitle("显示屏云管家")
                         .setContentText("你有一条报警信息,请及时处理")
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)// 设置为public后，通知栏将在锁屏界面显示
@@ -3164,6 +3201,12 @@ public class MQService extends AbsHeartBeatService {
                 }
                 setAlermDialog(type, line);
             } else if (msg.what == 10004) {
+                if (mediaPlayer!=null && mediaPlayer.isPlaying()){
+                    mediaPlayer.stop();
+                    mediaPlayer.release();
+                    mediaPlayer=null;
+                }
+
                 int type = msg.arg1;//报警类型
                 if (type == 0) {
                     startVoice(4);//来电报警
@@ -3187,6 +3230,74 @@ public class MQService extends AbsHeartBeatService {
             return true;
         }
     };
+    private void playAlerm(AssetFileDescriptor file,int count){
+        try {
+            if (file!=null){
+                mediaPlayer = new MediaPlayer();
+                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+                mediaPlayer.prepareAsync();
+                mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                    @Override
+                    public void onPrepared(MediaPlayer mp) {
+                        mediaPlayer.start();
+                    }
+                });
+                mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                    @Override
+                    public boolean onError(MediaPlayer mp, int what, int extra) {
+                        return false;
+                    }
+                });
+                if (count==0){
+                    mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                        @Override
+                        public void onCompletion(MediaPlayer mp) {
+                            mediaPlayer.release();
+                            mediaPlayer=null;
+                        }
+                    });
+                }
+                if (count==3){
+                    mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                        @Override
+                        public void onCompletion(MediaPlayer mp) {
+                            if (soundCount==1){
+                                mediaPlayer.release();
+                                mediaPlayer=null;
+                                return;
+                            }
+                            playAlerm(file,3);
+                            soundCount--;
+                        }
+                    });
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+//    private void playAlerm(AssetFileDescriptor file,boolean looper){
+//        try {
+//            if (mediaPlayer!=null && mediaPlayer.isPlaying()){
+//                mediaPlayer.stop();
+//                mediaPlayer.release();
+//                mediaPlayer.stop();
+//                mediaPlayer=null;
+//            }
+//            mediaPlayer = new MediaPlayer();
+//            mediaPlayer.setLooping(looper);
+//            mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//            mediaPlayer.prepareAsync();
+//            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+//                @Override
+//                public void onPrepared(MediaPlayer mp) {
+//                    mediaPlayer.start();
+//                }
+//            });
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     /**
      * @param type 0 打开 1关闭 2控制 3设置 4来电报警 5其他报警,6,关闭报警,7,删除
@@ -3195,167 +3306,220 @@ public class MQService extends AbsHeartBeatService {
     int soundType = 0;
     public void startVoice(int type) {
         try {
-            Log.i("startVoice","-->"+type);
+//            mediaPlayer.reset();
+//            if (mediaPlayer2==null){
+//                mediaPlayer2=new MediaPlayer();
+//            }
             soundType = type;
-            mediaPlayer.reset();
             if (type == 0) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.open);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-            } else if (type == 1) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.close);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-            } else if (type == 2) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.control);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-            } else if (type == 3) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.set);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-            } else if (type == 4) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_com);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-                soundCount = 1;
-                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    @Override
-                    public void onCompletion(MediaPlayer mp) {
-                        try {
-                            if (soundCount == 3) {
-                                soundCount = 3;
-                                return;
-                            } else if (soundCount < 3 && soundType == 4) {
-                                mediaPlayer.reset();
-                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_com);
-                                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                                mediaPlayer.prepare();
-                                mediaPlayer.start();
-                                file.close();
-                                soundCount++;
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
 
-                file.close();
+                AssetFileDescriptor file = getAssets().openFd("open.mp3");
+                playAlerm(file,0);
+
+
+            } else if (type == 1) {
+//                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.close);
+
+
+                AssetFileDescriptor file = getAssets().openFd("close.mp3");
+                playAlerm(file,0);
+//                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                mediaPlayer.prepareAsync();
+//                mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+//                    @Override
+//                    public void onPrepared(MediaPlayer mp) {
+//                        mediaPlayer.start();
+//                    }
+//                });
+
+
+
+            } else if (type == 2) {
+
+//                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.control);
+                AssetFileDescriptor file = getAssets().openFd("control.mp3");
+                playAlerm(file,0);
+//                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                MediaPlayer mediaPlayer=MediaPlayer.create(MQService.this,R.raw.control);
+//                mediaPlayer.prepareAsync();
+//                mediaPlayer.start();
+            } else if (type == 3) {
+
+
+//                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.set);
+                AssetFileDescriptor file = getAssets().openFd("set.mp3");
+                playAlerm(file,0);
+//                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                mediaPlayer=MediaPlayer.create(MQService.this,R.raw.set);
+//                mediaPlayer.prepareAsync();
+//                mediaPlayer.start();
+
+
+            } else if (type == 4) {
+//
+                Log.i("AlarmBroadcast","来电报警");
+                AssetFileDescriptor file = getAssets().openFd("alerm_com.mp3");
+                soundCount=3;
+//                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_com);
+                playAlerm(file,3);
+//                AssetFileDescriptor file = getAssets().openFd("alerm_com.mp3");
+////                MediaPlayer mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                mediaPlayer.prepareAsync();
+//
+//                mediaPlayer.start();
+//
+//                soundCount = 1;
+//                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+//                    @Override
+//                    public void onCompletion(MediaPlayer mp) {
+//                        try {
+//                            if (soundCount == 3) {
+//                                soundCount = 3;
+//                                return;
+//                            } else if (soundCount < 3 && soundType == 4) {
+//
+//                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_com);
+////                                AssetFileDescriptor file = getAssets().openFd("alerm_com.mp3");
+//                                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                                mediaPlayer.prepare();
+//                                mediaPlayer.start();
+//                                soundCount++;
+//                            }
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                });
+
+
 
             } else if (type == 5) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_close);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-                soundCount = 1;
-                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    @Override
-                    public void onCompletion(MediaPlayer mp) {
-                        try {
-                            if (soundCount == 3) {
-                                soundCount = 3;
-                                return;
-                            } else if (soundCount < 3 && soundType == 5) {
-                                mediaPlayer.reset();
-                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_close);
-                                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                                mediaPlayer.prepare();
-                                mediaPlayer.start();
-                                file.close();
-                                soundCount++;
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
+                Log.i("AlarmBroadcast","断电报警");
 
-                    }
-                });
+                soundCount=3;
+//                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_close);
+                AssetFileDescriptor file = getAssets().openFd("alerm_close.mp3");
+                playAlerm(file,3);
+//                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                mediaPlayer.prepareAsync();
+//                mediaPlayer.start();
+//                soundCount = 1;
+//                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+//                    @Override
+//                    public void onCompletion(MediaPlayer mp) {
+//                        try {
+//                            if (soundCount == 3) {
+//                                soundCount = 3;
+////                                mediaPlayer.reset();
+//                                return;
+//                            } else if (soundCount < 3 && soundType == 5) {
+////                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_close);
+//                                AssetFileDescriptor file = getAssets().openFd("alerm_close.mp3");
+//                                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                                mediaPlayer.prepareAsync();
+//                                mediaPlayer.start();
+//                                soundCount++;
+//                            }
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        }
+//
+//                    }
+//                });
+//
 
-                file.close();
 
 
             } else if (type == 6) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_other);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-                soundCount = 1;
-                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    @Override
-                    public void onCompletion(MediaPlayer mp) {
-                        try {
-                            if (soundCount == 3) {
-                                soundCount = 3;
-                            } else if (soundCount < 3 && soundType == 6) {
-                                mediaPlayer.reset();
-                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_other);
-                                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                                mediaPlayer.prepare();
-                                mediaPlayer.start();
-                                file.close();
-                                soundCount++;
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
 
-                    }
-                });
+//////                AssetFileDescriptor file = getAssets().openFd("alerm_other.mp3");
+////                mediaPlayer=MediaPlayer.create(MQService.this,R.raw.alerm_other);
+////                mediaPlayer.prepareAsync();
+////                mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+////                    @Override
+////                    public void onPrepared(MediaPlayer mp) {
+////                        mediaPlayer.start();
+////                    }
+////                });
+////
+////                Log.i("AlarmBroadcast","其他报警");
+                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_other);
+                soundCount=3;
+                playAlerm(file,3);
+//                soundCount = 1;
+//                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+//                    @Override
+//                    public void onCompletion(MediaPlayer mp) {
+//                        try {
+//                            if (soundCount == 3) {
+//                                soundCount = 3;
+////                                mediaPlayer2.reset();
+//                            } else if (soundCount < 3 && soundType == 6) {
+//                                Log.i("AlarmBroadcast","循环其他报警");
+////                                AssetFileDescriptor file = MQService.this.getResources().openRawResourceFd(R.raw.alerm_other);
+////                                AssetFileDescriptor file = getAssets().openFd("alerm_other.mp3");
+////                                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                                mediaPlayer.start();
+//                                soundCount++;
+//                            }
+//                        } catch (Exception e) {
+//                            Log.i("AlarmBroadcast","-->循环其他报警异常"+e.getMessage());
+//                            e.printStackTrace();
+//                        }
+//
+//                    }
+//                });
 
             } else if (type == 7) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.delete);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
+
+
+//                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.delete);
+                AssetFileDescriptor file = getAssets().openFd("delete.mp3");
+                playAlerm(file,0);
+//                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                mediaPlayer.prepareAsync();
+//                mediaPlayer.start();
             }
         } catch (Exception e) {
+            Log.i("AlarmBroadcast","-->报警异常"+e.getMessage());
             e.printStackTrace();
         }
     }
 
-    public void startVoice(int type, boolean looper) {
-        try {
-            if (type == 4) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_com);
-                mediaPlayer.setLooping(looper);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-            } else if (type == 5) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_close);
-                mediaPlayer.setLooping(looper);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-            } else if (type == 6) {
-                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_other);
-                mediaPlayer.setLooping(looper);
-                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                mediaPlayer.prepare();
-                mediaPlayer.start();
-                file.close();
-            }
+//    public void startVoice(int type, boolean looper) {
+//        try {
+//            if (type == 4) {
+////                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_com);
+//                AssetFileDescriptor file = getAssets().openFd("alerm_com.mp3");
+//                mediaPlayer.setLooping(looper);
+//                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                mediaPlayer.prepare();
+//                mediaPlayer.start();
+//                file.close();
+//            } else if (type == 5) {
+////                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_close);
+//                AssetFileDescriptor file = getAssets().openFd("alerm_close.mp3");
+//                mediaPlayer.setLooping(looper);
+//                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                mediaPlayer.prepare();
+//                mediaPlayer.start();
+//                file.close();
+//            } else if (type == 6) {
+////                AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.alerm_other);
+//                AssetFileDescriptor file = getAssets().openFd("alerm_other.mp3");
+//                mediaPlayer.setLooping(looper);
+//                mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+//                mediaPlayer.prepare();
+//                mediaPlayer.start();
+//                file.close();
+//            }
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+
 
     Handler handler = new Handler(mCallback);
 

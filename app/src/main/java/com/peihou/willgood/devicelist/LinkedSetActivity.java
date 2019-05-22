@@ -223,16 +223,13 @@ public class LinkedSetActivity extends BaseActivity {
                             break;
                         } else {
                             double dRanfo = Double.parseDouble(rango);
+                            String dRange=Math.abs(dRanfo)+"";
                             if (dRanfo < -128.0 || dRanfo > 512.9) {
                                 ToastUtil.showShort(this, "请输入-128.0~512.9范围的值");
                                 et_range.setText("");
                                 break;
                             }
-                            if (dRanfo >= 0 && rango.length() > 5) {
-                                ToastUtil.showShort(this, "请输入-128.0~512.9范围的值");
-                                et_range.setText("");
-                                break;
-                            } else if (dRanfo < 0 && rango.length() > 5) {
+                            if (dRange.length() > 5) {
                                 ToastUtil.showShort(this, "请输入-128.0~512.9范围的值");
                                 et_range.setText("");
                                 break;

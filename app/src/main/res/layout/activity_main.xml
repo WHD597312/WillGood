@@ -151,66 +151,6 @@
                 android:textColor="@color/white"
                 android:textSize="@dimen/sp_17" />
         </LinearLayout>
-        <RelativeLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/dp_15">
-
-            <ImageView
-                android:id="@+id/img_tem2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/dp_25"
-                android:src="@mipmap/ic_tem2" />
-
-            <TextView
-                android:id="@+id/tv_tem2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/dp_5"
-                android:layout_toRightOf="@id/img_tem2"
-                android:text="0"
-                android:textColor="@color/main_gray"
-                android:textSize="@dimen/sp_16" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignBottom="@id/tv_tem2"
-                android:layout_toRightOf="@id/tv_tem2"
-                android:text="℃"
-                android:textColor="@color/main_gray"
-                android:textSize="@dimen/sp_13" />
-
-            <TextView
-                android:id="@+id/tv_hum2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignTop="@id/tv_tem2"
-                android:layout_toLeftOf="@id/tv_hum_unit2"
-                android:text="0"
-                android:textColor="@color/main_gray"
-                android:textSize="@dimen/sp_16" />
-
-            <TextView
-                android:id="@+id/tv_hum_unit2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignBottom="@id/tv_hum2"
-                android:layout_alignParentRight="true"
-                android:layout_marginRight="@dimen/dp_25"
-                android:text="%"
-                android:textColor="@color/main_gray"
-                android:textSize="@dimen/sp_13" />
-
-            <ImageView
-                android:id="@+id/img_hum2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginRight="@dimen/dp_5"
-                android:layout_toLeftOf="@id/tv_hum2"
-                android:src="@mipmap/ic_hum2" />
-        </RelativeLayout>
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -218,6 +158,66 @@
             android:layout_marginTop="@dimen/dp_10"
             android:layout_marginBottom="@dimen/sp_20"
             >
+            <RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/dp_15">
+
+                <ImageView
+                    android:id="@+id/img_tem2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/dp_25"
+                    android:src="@mipmap/ic_tem2" />
+
+                <TextView
+                    android:id="@+id/tv_tem2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/dp_5"
+                    android:layout_toRightOf="@id/img_tem2"
+                    android:text="0"
+                    android:textColor="@color/main_gray"
+                    android:textSize="@dimen/sp_16" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignBottom="@id/tv_tem2"
+                    android:layout_toRightOf="@id/tv_tem2"
+                    android:text="℃"
+                    android:textColor="@color/main_gray"
+                    android:textSize="@dimen/sp_13" />
+
+                <TextView
+                    android:id="@+id/tv_hum2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignTop="@id/tv_tem2"
+                    android:layout_toLeftOf="@id/tv_hum_unit2"
+                    android:text="0"
+                    android:textColor="@color/main_gray"
+                    android:textSize="@dimen/sp_16" />
+
+                <TextView
+                    android:id="@+id/tv_hum_unit2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignBottom="@id/tv_hum2"
+                    android:layout_alignParentRight="true"
+                    android:layout_marginRight="@dimen/dp_25"
+                    android:text="%"
+                    android:textColor="@color/main_gray"
+                    android:textSize="@dimen/sp_13" />
+
+                <ImageView
+                    android:id="@+id/img_hum2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="@dimen/dp_5"
+                    android:layout_toLeftOf="@id/tv_hum2"
+                    android:src="@mipmap/ic_hum2" />
+            </RelativeLayout>
 
             <LinearLayout
                 android:id="@+id/ll_switch1"
